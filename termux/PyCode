@@ -1,0 +1,47 @@
+#!/data/data/com.termux/files/usr/bin/bash
+APP="$HOME/PyCode-app"
+PASTA="$HOME/storage/shared/PyCode"
+[ -d "$HOME/storage/shared" ] || PASTA="$HOME/PyCode"
+URL="http://127.0.0.1:8765/"
+mkdir -p "$PASTA"
+
+vivo() {
+  python - << 'PY'
+import sys, urllib.request
+try:
+    pedido = urllib.request.Request("http://127.0.0.1:8765/api/vivo", headers={"X-PyCode": "1"})
+    sys.exit(0 if b"pycode" in urllib.request.urlopen(pedido, timeout=1).read() else 1)
+except Exception:
+    sys.exit(1)
+PY
+}
+
+echo "== PyCode =="
+if vivo; then
+  echo "Já estava ligado."
+else
+  echo "Ligando o Python..."
+  python - "$APP" "$PASTA" << 'PY'
+import subprocess, sys
+app, pasta = sys.argv[1], sys.argv[2]
+log = open(pasta + "/termux.log", "a")
+subprocess.Popen(
+    [sys.executable, app + "/pycode_servidor.py", "--pasta", pasta, "--sem-navegador", "--auto-fechar", "30", "--wake-lock"],
+    stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True,
+)
+PY
+  for _ in $(seq 1 60); do
+    sleep 0.5
+    vivo && break
+  done
+fi
+
+if vivo; then
+  echo "Abrindo $URL"
+  termux-open-url "$URL" || echo "Não consegui abrir o Chrome. Abra manualmente: $URL"
+  sleep 1
+else
+  echo "O servidor não ligou."
+  echo "Rode: bash ~/PyCode-app/termux/diagnostico.sh"
+  read -r -p "Toque Enter para fechar " _
+fi

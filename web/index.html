@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>PyCode</title>
+<script>
+(function () {
+  var tema = "dark";
+  try {
+    var c = JSON.parse(localStorage.getItem("pyvs-config") || "{}");
+    tema = c.tema || localStorage.getItem("pyvs-tema") || "dark";
+  } catch (e) {}
+  document.documentElement.dataset.theme = tema;
+})();
+</script>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icone-192.png">
+<link rel="apple-touch-icon" href="/icone-192.png">
+<meta name="theme-color" content="#1E1E1E">
+<style>
+:root {
+  --atv: #2C2C2C; --atv-icone: #858585; --atv-ativo: #FFFFFF;
+  --lat: #F3F3F3; --lat-texto: #3B3B3B; --lat-titulo: #6F6F6F;
+  --item-hover: #E8E8E8; --item-ativo: #E4E6F1;
+  --editor: #FFFFFF; --abas: #F3F3F3; --aba: #ECECEC; --aba-texto: #8E8E8E; --aba-ativa-texto: #333333;
+  --borda: #E5E5E5; --painel: #FFFFFF;
+  --term: #333333; --term-erro: #CD3131; --term-cmd: #0451A5; --term-apagado: #8B8B8B;
+  --status: #007ACC; --status-texto: #FFFFFF; --tecla: #E4E4E4; --tecla-texto: #333333; --foco: #0090F1;
+  --erro: #E51400; --aviso: #BF8803; --veu: rgba(0, 0, 0, 0.25);
+  --ui: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --mono: "Cascadia Code", Consolas, "JetBrains Mono", "Courier New", monospace;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --atv: #333333; --atv-icone: #858585; --atv-ativo: #FFFFFF;
+    --lat: #252526; --lat-texto: #CCCCCC; --lat-titulo: #BBBBBB;
+    --item-hover: #2A2D2E; --item-ativo: #37373D;
+    --editor: #1E1E1E; --abas: #252526; --aba: #2D2D2D; --aba-texto: #969696; --aba-ativa-texto: #FFFFFF;
+    --borda: #2B2B2B; --painel: #1E1E1E;
+    --term: #CCCCCC; --term-erro: #F48771; --term-cmd: #9CDCFE; --term-apagado: #8B8B8B;
+    --status: #007ACC; --status-texto: #FFFFFF; --tecla: #333333; --tecla-texto: #E0E0E0; --foco: #007FD4;
+    --erro: #F14C4C; --aviso: #CCA700; --veu: rgba(0, 0, 0, 0.45);
+  }
+}
+:root[data-theme="dark"] {
+  --atv: #333333; --atv-icone: #858585; --atv-ativo: #FFFFFF;
+  --lat: #252526; --lat-texto: #CCCCCC; --lat-titulo: #BBBBBB;
+  --item-hover: #2A2D2E; --item-ativo: #37373D;
+  --editor: #1E1E1E; --abas: #252526; --aba: #2D2D2D; --aba-texto: #969696; --aba-ativa-texto: #FFFFFF;
+  --borda: #2B2B2B; --painel: #1E1E1E;
+  --term: #CCCCCC; --term-erro: #F48771; --term-cmd: #9CDCFE; --term-apagado: #8B8B8B;
+  --status: #007ACC; --status-texto: #FFFFFF; --tecla: #333333; --tecla-texto: #E0E0E0; --foco: #007FD4;
+  --erro: #F14C4C; --aviso: #CCA700; --veu: rgba(0, 0, 0, 0.45);
+}
+*, *::before, *::after { box-sizing: inherit; }
+[hidden] { display: none !important; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { height: 100%; margin: 0; background: var(--editor); color: var(--lat-texto); font-family: var(--ui); font-size: 13px; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:focus-visible { outline: 1px solid var(--foco); outline-offset: -1px; }
+svg { display: block; flex: 0 0 auto; }
+
+.app {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 48px auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 24px;
+  grid-template-areas: "atv lat centro" "status status status";
+}
+
+.atividade { grid-area: atv; background: var(--atv); display: flex; flex-direction: column; align-items: center; }
+.atividade button { width: 48px; height: 48px; display: grid; place-items: center; color: var(--atv-icone); border-left: 2px solid transparent; position: relative; }
+.atividade button:hover, .atividade button.ativo { color: var(--atv-ativo); }
+.atividade button.ativo { border-left-color: var(--atv-ativo); }
+.atividade .espaco { flex: 1; }
+.selo { position: absolute; right: 7px; bottom: 7px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--status); color: #fff; font-size: 10px; line-height: 16px; text-align: center; font-weight: 600; }
+
+.lateral { grid-area: lat; width: 240px; background: var(--lat); border-right: 1px solid var(--borda); display: flex; flex-direction: column; min-height: 0; }
+.lateral.fechada { display: none; }
+.lat-topo { height: 35px; display: flex; align-items: center; padding: 0 6px 0 20px; font-size: 11px; color: var(--lat-titulo); letter-spacing: 0.04em; flex: 0 0 auto; }
+.lat-topo span { flex: 1; }
+.lat-topo button, .pasta button { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 4px; opacity: 0.85; }
+.lat-topo button:hover, .pasta button:hover { background: var(--item-hover); opacity: 1; }
+.pasta { display: flex; align-items: center; height: 26px; padding: 0 6px 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.pasta span { flex: 1; }
+.arquivos { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.arquivo { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 6px 0 22px; cursor: pointer; white-space: nowrap; }
+.arquivo:hover { background: var(--item-hover); }
+.arquivo.ativo { background: var(--item-ativo); }
+.arquivo .nome { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.arquivo.com-erro .nome, .aba.com-erro .nome-aba { color: var(--erro); }
+.arquivo.com-aviso .nome, .aba.com-aviso .nome-aba { color: var(--aviso); }
+.contagem { font-size: 11px; font-weight: 600; padding-right: 2px; }
+.arquivo.com-erro .contagem { color: var(--erro); }
+.arquivo.com-aviso .contagem { color: var(--aviso); }
+.arquivo .acoes { display: none; gap: 2px; }
+.arquivo:hover .acoes, .arquivo.ativo .acoes { display: flex; }
+.arquivo .acoes button { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 4px; opacity: 0.75; }
+.arquivo .acoes button:hover { opacity: 1; background: var(--item-hover); }
+.config { padding: 6px 16px 16px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.cfg-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-bottom: 1px solid var(--borda); }
+.cfg-linha > span { font-size: 13px; }
+.cfg-botao { min-width: 92px; height: 32px; padding: 0 12px; border-radius: 4px; background: var(--tecla); color: var(--tecla-texto); }
+.cfg-passo { display: flex; align-items: center; gap: 6px; }
+.cfg-passo button { width: 32px; height: 32px; border-radius: 4px; background: var(--tecla); color: var(--tecla-texto); font-size: 16px; }
+.cfg-passo span { min-width: 26px; text-align: center; font-family: var(--mono); }
+.cfg-ajuda { font-size: 12px; color: var(--term-apagado); line-height: 1.5; margin: 12px 0 0; }
+
+.veu { position: absolute; inset: 0; background: var(--veu); z-index: 25; }
+
+.centro { grid-area: centro; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--editor); }
+.barra-abas { display: flex; background: var(--abas); height: 35px; flex: 0 0 auto; }
+.btn-menu { display: none; width: 44px; place-items: center; flex: 0 0 auto; color: var(--lat-texto); }
+.abas { display: flex; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.abas::-webkit-scrollbar { display: none; }
+.aba { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; background: var(--aba); color: var(--aba-texto); border-right: 1px solid var(--borda); white-space: nowrap; cursor: pointer; border-top: 1px solid transparent; }
+.aba.ativa { background: var(--editor); color: var(--aba-ativa-texto); border-top-color: var(--status); }
+.aba .fechar { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 4px; opacity: 0; }
+.aba.ativa .fechar, .aba:hover .fechar { opacity: 0.8; }
+.aba .fechar:hover { background: var(--item-hover); opacity: 1; }
+.btn-rodar { width: 44px; display: grid; place-items: center; color: #89D185; flex: 0 0 auto; }
+:root[data-theme="light"] .btn-rodar { color: #388A34; }
+.btn-rodar:disabled { opacity: 0.35; cursor: wait; }
+
+.area-editor { position: relative; flex: 1; min-height: 0; }
+#ace { position: absolute; inset: 0; }
+.vazio { position: absolute; inset: 0; display: none; place-content: center; text-align: center; color: var(--term-apagado); gap: 6px; padding: 20px; }
+.vazio.visivel { display: grid; }
+.vazio strong { font-size: 15px; color: var(--lat-texto); font-weight: 600; }
+
+.ace_marker-layer .pyvs-sq { position: absolute; background-repeat: repeat-x; background-position: left bottom; }
+.ace_marker-layer .pyvs-sq-error { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5l1.5-2 1.5 2 1.5-2 1.5 2' fill='none' stroke='%23F14C4C' stroke-width='1'/%3E%3C/svg%3E"); }
+.ace_marker-layer .pyvs-sq-warning { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5l1.5-2 1.5 2 1.5-2 1.5 2' fill='none' stroke='%23CCA700' stroke-width='1'/%3E%3C/svg%3E"); }
+
+.dica { display: flex; align-items: center; gap: 8px; padding: 7px 12px; font-size: 12.5px; background: var(--abas); border-top: 1px solid var(--borda); cursor: pointer; flex: 0 0 auto; }
+.dica span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dica.error svg { color: var(--erro); }
+.dica.warning svg { color: var(--aviso); }
+
+.teclas { display: none; gap: 5px; padding: 5px 6px; overflow-x: auto; background: var(--abas); border-top: 1px solid var(--borda); scrollbar-width: none; flex: 0 0 auto; }
+.teclas::-webkit-scrollbar { display: none; }
+.teclas button { flex: 0 0 auto; min-width: 42px; height: 40px; border-radius: 6px; background: var(--tecla); color: var(--tecla-texto); font-family: var(--mono); font-size: 16px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.teclas button:active { filter: brightness(1.3); }
+.teclas .sep { flex: 0 0 1px; background: var(--borda); margin: 6px 2px; }
+
+.divisor { height: 5px; flex: 0 0 5px; cursor: row-resize; border-top: 1px solid var(--borda); touch-action: none; }
+.divisor:hover, .divisor.arrastando { background: var(--foco); }
+.painel { height: var(--altura-painel, 32%); min-height: 80px; flex: 0 0 auto; display: flex; flex-direction: column; background: var(--painel); }
+.painel.fechado { display: none; }
+.painel.min { height: auto; min-height: 0; border-top: 1px solid var(--borda); }
+.painel.min .painel-corpo { display: none; }
+.painel-topo { display: flex; align-items: center; height: 35px; padding: 0 6px 0 12px; gap: 2px; flex: 0 0 auto; }
+.aba-painel { font-size: 11px; letter-spacing: 0.04em; color: var(--aba-texto); padding: 8px 8px 6px; border-bottom: 1px solid transparent; display: flex; align-items: center; gap: 6px; }
+.aba-painel.ativa { color: var(--aba-ativa-texto); border-bottom-color: var(--aba-ativa-texto); }
+.aba-painel .num { background: var(--item-ativo); color: var(--aba-ativa-texto); border-radius: 8px; padding: 0 6px; font-size: 10px; line-height: 16px; }
+.painel-topo .espaco { flex: 1; align-self: stretch; }
+.painel-topo .acao { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 4px; opacity: 0.8; }
+.painel-topo .acao:hover { background: var(--item-hover); opacity: 1; }
+.painel.min #btn-min-painel svg { transform: rotate(180deg); }
+.painel-corpo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#terminal { flex: 1; margin: 0; padding: 4px 16px 12px; overflow: auto; font-family: var(--mono); font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; color: var(--term); }
+#terminal .err { color: var(--term-erro); }
+#terminal .cmd { color: var(--term-cmd); }
+#terminal .apagado { color: var(--term-apagado); }
+.problemas { list-style: none; margin: 0; padding: 2px 0 8px; overflow: auto; flex: 1; }
+.problema { display: flex; align-items: flex-start; gap: 8px; padding: 5px 16px; cursor: pointer; line-height: 1.4; }
+.problema:hover { background: var(--item-hover); }
+.problema.error svg { color: var(--erro); }
+.problema.warning svg { color: var(--aviso); }
+.problema svg { margin-top: 2px; }
+.problema .local { color: var(--term-apagado); font-size: 12px; white-space: nowrap; }
+.problema .texto { flex: 1; }
+.sem-problemas { padding: 8px 16px; color: var(--term-apagado); }
+
+.status { grid-area: status; background: var(--status); color: var(--status-texto); display: flex; align-items: center; font-size: 12px; padding: 0 4px; white-space: nowrap; overflow: hidden; }
+.status > span, .status button, .status .dir span { padding: 0 7px; display: flex; align-items: center; gap: 4px; height: 24px; }
+.status button:hover { background: rgba(255, 255, 255, 0.12); }
+.status .dir { margin-left: auto; display: flex; }
+.lista-proj { list-style: none; margin: 0; padding: 0 0 12px; overflow-y: auto; }
+.proj { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 6px 4px 16px; cursor: pointer; }
+.proj:hover { background: var(--item-hover); }
+.proj.ativo { background: var(--item-ativo); }
+.proj .info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.proj .info strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj .info small { color: var(--term-apagado); font-size: 11.5px; }
+.proj .acoes { display: flex; gap: 2px; }
+.proj .acoes button { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 4px; opacity: 0.75; }
+.proj .acoes button:hover { opacity: 1; background: var(--item-hover); }
+.acoes-proj { display: flex; flex-direction: column; gap: 6px; padding: 8px 16px 12px; }
+.acao-larga { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 4px; background: var(--tecla); color: var(--tecla-texto); text-align: left; }
+.acao-larga.primaria { background: var(--status); color: #fff; }
+.desconectada { color: var(--aviso); }
+.aba .sujo { width: 9px; height: 9px; border-radius: 50%; background: currentColor; margin: 0 6px; flex: 0 0 auto; }
+.btn-rodar.parar { color: #F14C4C; }
+.linha-entrada { display: flex; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--borda); flex: 0 0 auto; }
+.linha-entrada input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border-radius: 4px; border: 1px solid var(--borda); background: var(--editor); color: var(--term); font-family: var(--mono); font-size: 14px; }
+.linha-entrada input:focus { outline: 1px solid var(--foco); }
+.linha-entrada button { height: 32px; padding: 0 14px; border-radius: 4px; background: var(--status); color: #fff; }
+#terminal .entrada { color: var(--term-cmd); }
+#telas { position: absolute; inset: 0 0 24px; pointer-events: none; z-index: 40; overflow: hidden; }
+.tk-janela { position: absolute; pointer-events: auto; display: flex; flex-direction: column; max-width: calc(100% - 16px); max-height: calc(100% - 16px); background: #f0f0f0; color: #000; border: 1px solid #7a7a7a; border-radius: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); overflow: hidden; outline: none; }
+.tk-janela:focus-visible { box-shadow: 0 0 0 2px var(--foco), 0 12px 40px rgba(0, 0, 0, 0.45); }
+.tk-barra { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 2px 0 12px; background: #fff; border-bottom: 1px solid #d0d0d0; cursor: move; touch-action: none; user-select: none; -webkit-user-select: none; flex: 0 0 auto; font: 13px "Segoe UI", system-ui, sans-serif; color: #000; }
+.tk-titulo { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tk-fechar { width: 40px; height: 30px; border-radius: 4px; color: #000; font-size: 14px; }
+.tk-fechar:hover { background: #e81123; color: #fff; }
+.tk-corpo { overflow: auto; min-width: 120px; min-height: 40px; background: #f0f0f0; flex: 1 1 auto; }
+.tk-w { box-sizing: border-box; margin: 0; font: 13px "Segoe UI", system-ui, sans-serif; color: #000; }
+.tk-frame { display: flex; flex-direction: column; align-items: center; }
+.tk-grade { display: grid; align-items: center; justify-items: center; }
+.tk-pilha { display: flex; }
+.tk-w.tk-oculto { display: none !important; }
+.tk-label { white-space: pre; padding: 1px; }
+.tk-button { background: #e1e1e1; border: 1px solid #adadad; padding: 2px 8px; cursor: pointer; touch-action: manipulation; }
+.tk-button:active { background: #cce4f7; border-color: #005499; }
+.tk-button:disabled { color: #8c8c8c; cursor: default; }
+.tk-entry { background: #fff; border: 1px solid #7a7a7a; padding: 2px 4px; }
+.tk-text { background: #fff; border: 1px solid #7a7a7a; resize: none; font-family: "Courier New", monospace; }
+.tk-canvas { position: relative; overflow: hidden; background: #f0f0f0; }
+.tk-canvas svg { display: block; }
+.info-local { font-size: 12px; color: var(--term-apagado); line-height: 1.6; margin: 10px 0 0; word-break: break-all; }
+@media (pointer: coarse) { .linha-entrada input, .linha-entrada button { height: 40px; } }
+.aviso { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); max-width: min(92vw, 420px); padding: 10px 14px; border-radius: 6px; background: #252526; color: #fff; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4); z-index: 50; text-align: center; }
+:root[data-theme="light"] .aviso { background: #333; }
+
+@media (pointer: coarse) {
+  .teclas { display: flex; }
+  .barra-abas { height: 42px; }
+  .aba .fechar { opacity: 0.6; width: 28px; height: 28px; }
+  .arquivo { height: 38px; font-size: 14px; }
+  .arquivo .acoes button { width: 34px; height: 34px; }
+  .painel-topo { height: 42px; }
+  .aba-painel { font-size: 12px; padding: 10px 10px 8px; }
+  .problema { padding: 9px 16px; font-size: 14px; }
+  #terminal { font-size: 14px; }
+  .divisor { height: 10px; flex-basis: 10px; }
+}
+@media (max-width: 700px) {
+  .app { grid-template-columns: 0 0 minmax(0, 1fr); }
+  .atividade { display: none; }
+  .btn-menu { display: grid; }
+  .lateral { position: absolute; left: 0; top: 0; bottom: 24px; width: min(84vw, 320px); z-index: 30; box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35); }
+  .painel { height: var(--altura-painel, 42%); }
+  .status .opcional { display: none; }
+  .dica { font-size: 13px; padding: 9px 12px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="atividade" aria-label="Barra de atividades">
+    <button id="btn-explorador" title="Explorador (Ctrl+B)" aria-label="Explorador">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3H7.5A1.5 1.5 0 0 0 6 4.5v13A1.5 1.5 0 0 0 7.5 19h9a1.5 1.5 0 0 0 1.5-1.5V7z"/><path d="M14 3v4h4"/><path d="M3.5 7v13.5A1.5 1.5 0 0 0 5 22h9"/></svg>
+    </button>
+    <button id="btn-projetos" title="Projetos" aria-label="Projetos">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2h9A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>
+    </button>
+    <button id="btn-rodar-lat" title="Executar (F5)" aria-label="Executar">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M7 4.5v15l12-7.5z"/></svg>
+    </button>
+    <button id="btn-problemas-lat" title="Problemas" aria-label="Problemas">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/></svg>
+      <span class="selo" id="selo-problemas" hidden>0</span>
+    </button>
+    <button id="btn-terminal" title="Terminal (Ctrl+J)" aria-label="Terminal">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="1.5"/><path d="M7 10l3 2.5L7 15M12.5 15H17"/></svg>
+    </button>
+    <div class="espaco"></div>
+    <button id="btn-config" title="Configurações" aria-label="Configurações">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>
+    </button>
+  </nav>
+
+  <div class="veu" id="veu" hidden></div>
+
+  <aside class="lateral fechada" id="lateral" aria-label="Barra lateral">
+    <div class="lat-topo">
+      <span id="lat-titulo">EXPLORADOR</span>
+      <button id="btn-lat-projetos" title="Projetos" aria-label="Projetos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2h9A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>
+      </button>
+      <button id="btn-lat-config" title="Configurações" aria-label="Configurações">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>
+      </button>
+      <button id="btn-fechar-lat" title="Fechar" aria-label="Fechar barra lateral">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div id="vista-explorador" style="display:flex;flex-direction:column;min-height:0;flex:1">
+      <div class="pasta">
+        <span id="nome-projeto" style="text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">TREINO</span>
+        <button id="btn-pasta-proj" title="Abrir pasta do projeto" aria-label="Abrir pasta do projeto" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2h9A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg>
+        </button>
+        <button id="btn-vscode" title="Abrir no VS Code" aria-label="Abrir no VS Code" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 2v14l-4 2-11-9.5L3 14l-1-1V11l1-1 3 2.5z"/><path d="M17 3v18"/></svg>
+        </button>
+        <button id="btn-baixar-proj" title="Exportar projeto (.zip)" aria-label="Exportar projeto">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M4.5 6.8L8 10.3l3.5-3.5M2.5 13.5h11"/></svg>
+        </button>
+        <button id="btn-novo" title="Novo arquivo" aria-label="Novo arquivo">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-8z"/><path d="M9 1.5v4h4M8 8v4M6 10h4"/></svg>
+        </button>
+      </div>
+      <ul class="arquivos" id="arquivos"></ul>
+    </div>
+    <div id="vista-projetos" style="display:flex;flex-direction:column;min-height:0;flex:1" hidden>
+      <div class="acoes-proj">
+        <button class="acao-larga primaria" id="btn-novo-proj">＋ Novo projeto</button>
+        <button class="acao-larga" id="btn-importar">⇪ Importar (.zip ou .py)</button>
+        <button class="acao-larga" id="btn-abrir-pasta" hidden>📁 Abrir pasta dos projetos</button>
+      </div>
+      <ul class="lista-proj" id="lista-proj"></ul>
+    </div>
+    <input type="file" id="entrada-arquivos" accept=".zip,.py,.txt,.md,.json,.csv" multiple hidden>
+    <div class="config" id="vista-config" hidden>
+      <div class="cfg-linha"><span>Tema</span><button class="cfg-botao" id="cfg-tema">Escuro</button></div>
+      <div class="cfg-linha"><span>Tamanho da fonte</span><div class="cfg-passo"><button id="cfg-menos" aria-label="Diminuir fonte">−</button><span id="cfg-fonte">14</span><button id="cfg-mais" aria-label="Aumentar fonte">+</button></div></div>
+      <div class="cfg-linha"><span>Quebra de linha</span><button class="cfg-botao" id="cfg-quebra" role="switch" aria-checked="false">Desligada</button></div>
+      <div class="cfg-linha"><span>Teclas de símbolos</span><button class="cfg-botao" id="cfg-teclas" role="switch" aria-checked="false">Auto</button></div>
+      <p class="cfg-ajuda">Os erros são verificados enquanto você digita. Toque num item da aba Problemas para ir direto à linha.</p>
+      <p class="info-local" id="info-local"></p>
+    </div>
+  </aside>
+
+  <main class="centro">
+    <div class="barra-abas">
+      <button class="btn-menu" id="btn-menu" aria-label="Abrir arquivos">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="abas" id="abas" role="tablist"></div>
+      <button class="btn-rodar" id="btn-rodar" title="Executar arquivo (F5)" aria-label="Executar" disabled></button>
+    </div>
+    <div class="area-editor">
+      <div id="ace"></div>
+      <div class="vazio" id="vazio"><strong>Nenhum arquivo aberto</strong><span>Abra um arquivo no explorador ou crie um novo.</span></div>
+    </div>
+    <div class="dica" id="dica" hidden>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6.3"/><path d="M8 4.8v3.8M8 11v.2"/></svg>
+      <span id="dica-texto"></span>
+    </div>
+    <div class="teclas" id="teclas" aria-label="Teclas">
+      <button data-k="tab" aria-label="Indentar">⇥</button>
+      <button data-k="dedent" aria-label="Remover indentação">⇤</button>
+      <button data-k="esq" data-rep aria-label="Esquerda">←</button>
+      <button data-k="dir" data-rep aria-label="Direita">→</button>
+      <button data-k="cima" data-rep aria-label="Cima">↑</button>
+      <button data-k="baixo" data-rep aria-label="Baixo">↓</button>
+      <span class="sep"></span>
+      <button data-k=":">:</button>
+      <button data-k="()">( )</button>
+      <button data-k="[]">[ ]</button>
+      <button data-k="{}">{ }</button>
+      <button data-k='""'>" "</button>
+      <button data-k="''">' '</button>
+      <button data-k="=">=</button>
+      <button data-k=",">,</button>
+      <button data-k=".">.</button>
+      <button data-k="_">_</button>
+      <button data-k="#">#</button>
+      <button data-k="+">+</button>
+      <button data-k="-">-</button>
+      <button data-k="*">*</button>
+      <button data-k="/">/</button>
+      <button data-k="%">%</button>
+      <button data-k="<">&lt;</button>
+      <button data-k=">">&gt;</button>
+      <button data-k="!">!</button>
+      <span class="sep"></span>
+      <button data-k="undo" aria-label="Desfazer">↶</button>
+      <button data-k="redo" aria-label="Refazer">↷</button>
+    </div>
+    <div class="divisor" id="divisor" aria-hidden="true"></div>
+    <section class="painel" id="painel" aria-label="Painel">
+      <div class="painel-topo" id="painel-topo">
+        <button class="aba-painel" id="aba-problemas">PROBLEMAS <span class="num" id="num-problemas">0</span></button>
+        <button class="aba-painel ativa" id="aba-terminal">TERMINAL</button>
+        <div class="espaco" id="painel-espaco"></div>
+        <button class="acao" id="btn-limpar" title="Limpar terminal" aria-label="Limpar terminal">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 4h10M6 4V2.5h4V4M4.5 4l.7 9.5h5.6L11.5 4"/></svg>
+        </button>
+        <button class="acao" id="btn-min-painel" title="Recolher painel" aria-label="Recolher painel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 6l4 4 4-4"/></svg>
+        </button>
+        <button class="acao" id="btn-fechar-painel" title="Fechar painel (Ctrl+J)" aria-label="Fechar painel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+        </button>
+      </div>
+      <div class="painel-corpo">
+        <ul class="problemas" id="lista-problemas" hidden></ul>
+        <pre id="terminal"><span class="apagado">Pressione F5 ou ▶ para executar o arquivo aberto.</span></pre>
+        <div class="linha-entrada" id="linha-entrada" hidden>
+          <input id="entrada" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Digite aqui e Enter para o input()" aria-label="Entrada do programa">
+          <button id="btn-enviar">Enviar</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="telas"></div>
+  <div class="aviso" id="aviso" role="status" hidden></div>
+  <footer class="status">
+    <button id="st-problemas" title="Problemas">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/></svg><span id="st-erros">0</span>
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3.2M8 11.6v.2"/></svg><span id="st-avisos">0</span>
+    </button>
+    <span id="st-python">⟳ Conectando…</span>
+    <span id="st-pasta" hidden></span>
+    <div class="dir">
+      <span id="st-cursor">Ln 1, Col 1</span>
+      <span class="opcional">Espaços: 4</span>
+      <span class="opcional">UTF-8</span>
+      <span class="opcional" id="st-lingua">Python</span>
+    </div>
+  </footer>
+</div>
+
+<script src="/libs/ace/ace.js"></script>
+<script src="/libs/ace/ext-language_tools.js"></script>
+<script src="/libs/ace/mode-python.js"></script>
+<script src="/libs/ace/keybinding-vscode.js"></script>
+<script src="/libs/ace/snippets/python.js"></script>
+<script>
+const CHAVE_CONFIG = "pyvs-config";
+const CHAVE_UI = "pycode-ui";
+const $ = (id) => document.getElementById(id);
+const TK = (() => {
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const w = {};
+  const afters = {};
+  let ordem = 0;
+  const RELEVO = {flat: "solid", raised: "outset", sunken: "inset", groove: "groove", ridge: "ridge", solid: "solid"};
+  const TIPOS_MOUSE = {ButtonPress: "pointerdown", ButtonRelease: "pointerup", Motion: "pointermove", Enter: "pointerenter", Leave: "pointerleave", MouseWheel: "wheel", FocusIn: "focusin", FocusOut: "focusout"};
+  const NOMES = {Enter: "Return", Backspace: "BackSpace", Escape: "Escape", Tab: "Tab", Delete: "Delete", ArrowLeft: "Left", ArrowRight: "Right", ArrowUp: "Up", ArrowDown: "Down", Home: "Home", End: "End", PageUp: "Prior", PageDown: "Next", Shift: "Shift_L", Control: "Control_L", Alt: "Alt_L", Meta: "Meta_L", CapsLock: "Caps_Lock", " ": "space", "+": "plus", "-": "minus", "*": "asterisk", "/": "slash", ".": "period", ",": "comma", "=": "equal", "(": "parenleft", ")": "parenright", "!": "exclam", "?": "question", ":": "colon", ";": "semicolon", "_": "underscore", "%": "percent"};
+  const CARACTERES = {Enter: "\r", Backspace: "\b", Escape: "\x1b", Tab: "\t"};
+
+  function chamar(cid, dados) {
+    if (!cid || typeof window.tkChamar !== "function") return undefined;
+    try {
+      return window.tkChamar(cid, JSON.stringify(dados || {}));
+    } catch (e) {
+      console.error(e);
+      return undefined;
+    }
+  }
+
+  function telas() {
+    return $("telas");
+  }
+
+  function cor(c) {
+    if (c === null || c === undefined || c === "") return null;
+    const s = String(c);
+    return s.startsWith("System") ? null : s;
+  }
+
+  function fonte(f) {
+    if (f === null || f === undefined || f === "") return null;
+    let partes;
+    if (Array.isArray(f)) partes = f.map(String);
+    else {
+      const s = String(f).trim();
+      const m = s.match(/^\{([^}]*)\}\s*(.*)$/);
+      partes = m ? [m[1], ...m[2].split(/\s+/).filter(Boolean)] : s.split(/\s+/);
+    }
+    const familia = partes[0] || "Arial";
+    const tamanho = Number(partes[1]);
+    const estilos = partes.slice(2).join(" ").toLowerCase();
+    const px = !tamanho ? 13 : tamanho > 0 ? Math.round((tamanho * 4) / 3) : -tamanho;
+    const mapa = {courier: '"Courier New", Courier, monospace', "courier new": '"Courier New", Courier, monospace', helvetica: "Helvetica, Arial, sans-serif", times: '"Times New Roman", Times, serif', tkdefaultfont: "system-ui, sans-serif", tkfixedfont: "monospace", consolas: "Consolas, monospace"};
+    const fam = mapa[familia.toLowerCase()] || `"${familia}", system-ui, sans-serif`;
+    return `${estilos.includes("italic") ? "italic " : ""}${estilos.includes("bold") ? "bold " : ""}${px}px ${fam}`;
+  }
+
+  function partesAncora(a) {
+    const s = String(a || "center").toLowerCase();
+    if (s === "center") return {h: "c", v: "c"};
+    return {h: s.includes("w") ? "w" : s.includes("e") ? "e" : "c", v: s.includes("n") ? "n" : s.includes("s") ? "s" : "c"};
+  }
+
+  function margem(par) {
+    const p = Array.isArray(par) ? par : [par || 0, par || 0];
+    return p;
+  }
+
+  function criarEl(tipo) {
+    let el;
+    if (tipo === "button") {
+      el = document.createElement("button");
+      el.type = "button";
+    } else if (tipo === "entry") {
+      el = document.createElement("input");
+      el.type = "text";
+      el.autocomplete = "off";
+      el.spellcheck = false;
+      el.setAttribute("autocapitalize", "off");
+    } else if (tipo === "text") {
+      el = document.createElement("textarea");
+      el.spellcheck = false;
+    } else if (tipo === "canvas") {
+      el = document.createElement("div");
+      const svg = document.createElementNS(SVGNS, "svg");
+      el.append(svg);
+    } else {
+      el = document.createElement("div");
+    }
+    el.className = `tk-w tk-${tipo} tk-oculto`;
+    return el;
+  }
+
+  function novaJanela(id, titulo) {
+    const jan = document.createElement("div");
+    jan.className = "tk-janela";
+    jan.tabIndex = 0;
+    const quantas = Object.values(w).filter((x) => x.tipo === "tk").length;
+    jan.style.left = `${12 + quantas * 28}px`;
+    jan.style.top = `${12 + quantas * 28}px`;
+    const barra = document.createElement("div");
+    barra.className = "tk-barra";
+    const t = document.createElement("span");
+    t.className = "tk-titulo";
+    t.textContent = titulo || "tk";
+    const fechar = document.createElement("button");
+    fechar.type = "button";
+    fechar.className = "tk-fechar";
+    fechar.textContent = "✕";
+    fechar.setAttribute("aria-label", "Fechar janela");
+    barra.append(t, fechar);
+    const corpo = document.createElement("div");
+    corpo.className = "tk-corpo tk-frame";
+    corpo.dataset.tkid = id;
+    jan.append(barra, corpo);
+    telas().append(jan);
+    w[id] = {el: corpo, jan, rotulo: t, tipo: "tk", binds: [], grade: {col: {}, lin: {}}, mouse: {}};
+    fechar.addEventListener("click", () => {
+      const r = w[id];
+      if (r && r.aoFechar) chamar(r.aoFechar, {_sem_evento: 1});
+      else destruir(id);
+    });
+    arrastar(barra, jan);
+    jan.addEventListener("keydown", (e) => teclado(id, e, "KeyPress"));
+    jan.addEventListener("keyup", (e) => teclado(id, e, "KeyRelease"));
+    jan.addEventListener("pointerdown", (e) => {
+      if (!["INPUT", "TEXTAREA"].includes(e.target.tagName)) setTimeout(() => jan.focus({preventScroll: true}), 0);
+    });
+    setTimeout(() => jan.focus({preventScroll: true}), 0);
+  }
+
+  function arrastar(barra, jan) {
+    barra.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".tk-fechar")) return;
+      barra.setPointerCapture(e.pointerId);
+      const area = telas().getBoundingClientRect();
+      const inicio = jan.getBoundingClientRect();
+      const dx = e.clientX - inicio.left;
+      const dy = e.clientY - inicio.top;
+      const mover = (ev) => {
+        const x = Math.min(Math.max(ev.clientX - dx - area.left, 0), Math.max(0, area.width - 80));
+        const y = Math.min(Math.max(ev.clientY - dy - area.top, 0), Math.max(0, area.height - 34));
+        jan.style.left = `${x}px`;
+        jan.style.top = `${y}px`;
+      };
+      const soltar = () => {
+        barra.removeEventListener("pointermove", mover);
+        barra.removeEventListener("pointerup", soltar);
+        barra.removeEventListener("pointercancel", soltar);
+      };
+      barra.addEventListener("pointermove", mover);
+      barra.addEventListener("pointerup", soltar);
+      barra.addEventListener("pointercancel", soltar);
+    });
+  }
+
+  function criar(id, tipo, paiId) {
+    const pai = w[paiId];
+    if (!pai) return;
+    const el = criarEl(tipo);
+    el.dataset.tkid = id;
+    pai.el.append(el);
+    const r = {el, tipo, pai: paiId, binds: [], grade: {col: {}, lin: {}}, mouse: {}, itens: {}};
+    if (tipo === "entry") r.largura = 20;
+    if (tipo === "text") {
+      r.largura = 80;
+      r.altura = 24;
+    }
+    if (tipo === "canvas") {
+      r.svg = el.firstChild;
+      r.largura = 380;
+      r.altura = 265;
+    }
+    w[id] = r;
+    if (tipo === "button") {
+      el.addEventListener("click", () => {
+        const atual = w[id];
+        if (atual && atual.comando && !el.disabled) chamar(atual.comando, {_sem_evento: 1});
+      });
+    }
+    if (tipo === "entry" || tipo === "text") {
+      el.addEventListener("input", () => {
+        const atual = w[id];
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: el.value});
+      });
+    }
+    aparencia(id);
+  }
+
+  function configurar(id, json) {
+    const r = w[id];
+    if (!r) return;
+    const o = JSON.parse(json);
+    const el = r.el;
+    const s = el.style;
+    for (const [k, v] of Object.entries(o)) {
+      if (k === "text") {
+        if (r.tipo === "label" || r.tipo === "button" || r.tipo === "frame") el.textContent = String(v);
+      } else if (k === "value") {
+        if (el.value !== String(v)) el.value = String(v);
+      } else if (k === "font") {
+        const f = fonte(v);
+        if (f) s.font = f;
+      } else if (k === "bg" || k === "background") {
+        const c = cor(v);
+        if (c) {
+          s.background = c;
+          if (r.tipo === "tk") r.jan.style.background = c;
+          r.fundo = c;
+        }
+      } else if (k === "fg" || k === "foreground") {
+        const c = cor(v);
+        if (c) s.color = c;
+      } else if (k === "width") r.largura = Number(v);
+      else if (k === "height") r.altura = Number(v);
+      else if (k === "bd" || k === "borderwidth") r.borda = Number(v);
+      else if (k === "relief") r.relevo = String(v);
+      else if (k === "padx") r.padx = Number(Array.isArray(v) ? v[0] : v);
+      else if (k === "pady") r.pady = Number(Array.isArray(v) ? v[0] : v);
+      else if (k === "justify") s.textAlign = v === "left" ? "left" : v === "right" ? "right" : "center";
+      else if (k === "state") r.estado = String(v);
+      else if (k === "readonlybackground") r.fundoLeitura = cor(v);
+      else if (k === "disabledforeground") r.corDesativado = cor(v);
+      else if (k === "command") r.comando = v;
+      else if (k === "wraplength") {
+        s.maxWidth = `${Number(v)}px`;
+        s.whiteSpace = "pre-wrap";
+      } else if (k === "show") {
+        if (r.tipo === "entry") el.type = v ? "password" : "text";
+      } else if (k === "activebackground") r.fundoAtivo = cor(v);
+      else if (k === "insertbackground") s.caretColor = cor(v) || "";
+      else if (k === "anchor") {
+        r.ancora = String(v);
+        const pa = partesAncora(v);
+        if (r.tipo === "label") s.textAlign = pa.h === "w" ? "left" : pa.h === "e" ? "right" : "center";
+      }
+    }
+    aparencia(id);
+  }
+
+  function aparencia(id) {
+    const r = w[id];
+    const el = r.el;
+    const s = el.style;
+    const deTexto = ["label", "button", "entry", "text"].includes(r.tipo);
+    let largura = "";
+    let altura = "";
+    if (r.largura > 0) {
+      if (r.tipo === "entry" || r.tipo === "text") largura = `calc(${r.largura}ch + 10px)`;
+      else if (deTexto) largura = `calc(${r.largura}ch + ${r.tipo === "button" ? 16 : 4}px)`;
+      else largura = `${r.largura}px`;
+    }
+    if (r.altura > 0) {
+      if (deTexto) altura = `calc(${r.altura} * 1.25em + ${r.tipo === "button" ? 10 : 6}px)`;
+      else altura = `${r.altura}px`;
+    }
+    s.width = r.esticaH ? "auto" : largura;
+    s.minWidth = r.esticaH ? largura : "";
+    s.height = r.esticaV ? "auto" : altura;
+    s.minHeight = r.esticaV ? altura : "";
+    if (r.tipo === "canvas") {
+      r.svg.setAttribute("width", String(r.largura));
+      r.svg.setAttribute("height", String(r.altura));
+      s.width = r.esticaH ? "auto" : `${r.largura}px`;
+      s.height = r.esticaV ? "auto" : `${r.altura}px`;
+    }
+    if (r.tipo === "tk" && r.tamanho) {
+      s.width = `${r.tamanho[0]}px`;
+      s.height = `${r.tamanho[1]}px`;
+    }
+    if (r.borda !== undefined || r.relevo) {
+      const b = r.borda !== undefined ? r.borda : r.tipo === "button" ? 2 : 1;
+      s.borderWidth = `${b}px`;
+      s.borderStyle = b === 0 ? "none" : RELEVO[r.relevo] || (r.tipo === "entry" || r.tipo === "text" ? "inset" : r.tipo === "button" ? "outset" : "solid");
+      s.borderColor = r.relevo === "flat" ? "transparent" : r.relevo === "solid" ? "#000" : "";
+    }
+    if (r.padx !== undefined || r.pady !== undefined) s.padding = `${r.pady || 0}px ${r.padx || 0}px`;
+    const desativado = r.estado === "disabled";
+    if (r.tipo === "button") el.disabled = desativado;
+    if (r.tipo === "entry" || r.tipo === "text") {
+      el.readOnly = r.estado === "readonly" || (r.tipo === "text" && desativado);
+      el.disabled = r.tipo === "entry" && desativado;
+      if (r.estado === "readonly" && r.fundoLeitura) s.background = r.fundoLeitura;
+      else if (r.fundo) s.background = r.fundo;
+    }
+  }
+
+  function esticar(r, sticky, horizontalPai) {
+    const st = String(sticky || "").toLowerCase();
+    r.esticaH = st.includes("e") && st.includes("w");
+    r.esticaV = st.includes("n") && st.includes("s");
+    return st;
+  }
+
+  function grid(id, json) {
+    const r = w[id];
+    if (!r) return;
+    const o = JSON.parse(json);
+    const pai = w[r.pai];
+    r.el.classList.remove("tk-oculto");
+    pai.el.classList.add("tk-grade");
+    pai.el.classList.remove("tk-pilha");
+    const s = r.el.style;
+    s.gridRow = `${o.row + 1} / span ${o.rowspan || 1}`;
+    s.gridColumn = `${o.column + 1} / span ${o.columnspan || 1}`;
+    const st = esticar(r, o.sticky);
+    s.alignSelf = r.esticaV ? "stretch" : st.includes("n") ? "start" : st.includes("s") ? "end" : "center";
+    s.justifySelf = r.esticaH ? "stretch" : st.includes("w") ? "start" : st.includes("e") ? "end" : "center";
+    const px = margem(o.padx);
+    const py = margem(o.pady);
+    s.margin = `${py[0]}px ${px[1]}px ${py[1]}px ${px[0]}px`;
+    if (o.ipadx || o.ipady) s.padding = `${o.ipady || 0}px ${o.ipadx || 0}px`;
+    r.layout = {tipo: "grid", row: o.row, column: o.column, rowspan: o.rowspan || 1, columnspan: o.columnspan || 1};
+    aparencia(id);
+    atualizarGrade(r.pai);
+  }
+
+  function atualizarGrade(id) {
+    const pai = w[id];
+    if (!pai) return;
+    let colunas = 0;
+    let linhas = 0;
+    for (const r of Object.values(w)) {
+      if (r.pai === id && r.layout && r.layout.tipo === "grid") {
+        colunas = Math.max(colunas, r.layout.column + r.layout.columnspan);
+        linhas = Math.max(linhas, r.layout.row + r.layout.rowspan);
+      }
+    }
+    const monta = (pesos, total) => {
+      const lista = [];
+      let algum = false;
+      for (let i = 0; i < total; i++) {
+        const p = pesos[i];
+        if (p && (p.peso > 0 || p.minimo > 0)) {
+          algum = true;
+          lista.push(p.peso > 0 ? `minmax(${p.minimo || 0}px, ${p.peso}fr)` : `minmax(${p.minimo}px, auto)`);
+        } else lista.push("auto");
+      }
+      return algum ? lista.join(" ") : "";
+    };
+    pai.el.style.gridTemplateColumns = monta(pai.grade.col, colunas);
+    pai.el.style.gridTemplateRows = monta(pai.grade.lin, linhas);
+  }
+
+  function pesoGrid(id, eixo, indice, peso, minimo) {
+    const r = w[id];
+    if (!r) return;
+    r.grade[eixo][indice] = {peso: Number(peso), minimo: Number(minimo)};
+    atualizarGrade(id);
+  }
+
+  function pack(id, json) {
+    const r = w[id];
+    if (!r) return;
+    const o = JSON.parse(json);
+    const pai = w[r.pai];
+    r.el.classList.remove("tk-oculto");
+    pai.el.classList.add("tk-pilha");
+    pai.el.classList.remove("tk-grade");
+    const lado = o.side || "top";
+    const horizontal = lado === "left" || lado === "right";
+    if (!pai.direcao) pai.direcao = horizontal ? "row" : "column";
+    pai.el.style.flexDirection = pai.direcao;
+    const s = r.el.style;
+    ordem += 1;
+    s.order = String(lado === "bottom" || lado === "right" ? 100000 - ordem : ordem);
+    const fill = o.fill || "none";
+    const cruzado = pai.direcao === "column" ? "x" : "y";
+    const estica = fill === "both" || fill === cruzado;
+    if (pai.direcao === "column") r.esticaH = estica;
+    else r.esticaV = estica;
+    const pa = partesAncora(o.anchor);
+    const lateral = pai.direcao === "column" ? (pa.h === "w" ? "flex-start" : pa.h === "e" ? "flex-end" : "center") : pa.v === "n" ? "flex-start" : pa.v === "s" ? "flex-end" : "center";
+    s.alignSelf = estica ? "stretch" : lateral;
+    s.flexGrow = o.expand ? "1" : "0";
+    s.flexShrink = "0";
+    const px = margem(o.padx);
+    const py = margem(o.pady);
+    s.margin = `${py[0]}px ${px[1]}px ${py[1]}px ${px[0]}px`;
+    r.layout = {tipo: "pack"};
+    aparencia(id);
+  }
+
+  function place(id, json) {
+    const r = w[id];
+    if (!r) return;
+    const o = JSON.parse(json);
+    const pai = w[r.pai];
+    r.el.classList.remove("tk-oculto");
+    pai.el.style.position = "relative";
+    if (!pai.el.style.minHeight && pai.tipo !== "canvas") pai.el.style.minHeight = "200px";
+    const s = r.el.style;
+    s.position = "absolute";
+    const rx = o.relx !== undefined ? `${o.relx * 100}%` : "0px";
+    const ry = o.rely !== undefined ? `${o.rely * 100}%` : "0px";
+    s.left = `calc(${rx} + ${o.x || 0}px)`;
+    s.top = `calc(${ry} + ${o.y || 0}px)`;
+    const pa = partesAncora(o.anchor || "nw");
+    const tx = pa.h === "e" ? "-100%" : pa.h === "w" ? "0" : "-50%";
+    const ty = pa.v === "s" ? "-100%" : pa.v === "n" ? "0" : "-50%";
+    s.transform = `translate(${tx}, ${ty})`;
+    if (o.width !== undefined) s.width = `${o.width}px`;
+    if (o.height !== undefined) s.height = `${o.height}px`;
+    if (o.relwidth !== undefined) s.width = `${o.relwidth * 100}%`;
+    if (o.relheight !== undefined) s.height = `${o.relheight * 100}%`;
+    r.layout = {tipo: "place"};
+  }
+
+  function esconder(id) {
+    const r = w[id];
+    if (r) r.el.classList.add("tk-oculto");
+  }
+
+  function destruir(id) {
+    const r = w[id];
+    if (!r) return;
+    for (const [filhoId, filho] of Object.entries(w)) {
+      if (filho.pai === id) destruir(filhoId);
+    }
+    if (r.tipo === "tk") r.jan.remove();
+    else r.el.remove();
+    delete w[id];
+    if (r.pai) atualizarGrade(r.pai);
+  }
+
+  function analisarSequencia(seq) {
+    let s = String(seq).trim();
+    if (!s.startsWith("<")) return {tipo: "KeyPress", detalhe: s, mods: []};
+    s = s.slice(1, -1);
+    const partes = s.split("-");
+    const mods = [];
+    const modificadores = ["Double", "Triple", "B1", "B2", "B3", "Shift", "Control", "Alt", "Any", "Lock", "Command", "Option"];
+    while (partes.length > 1 && modificadores.includes(partes[0])) mods.push(partes.shift());
+    let tipo = partes[0];
+    let detalhe = partes.slice(1).join("-") || null;
+    if (/^\d$/.test(tipo)) {
+      detalhe = tipo;
+      tipo = "ButtonPress";
+    }
+    if (tipo === "Key") tipo = "KeyPress";
+    if (tipo === "Button") tipo = "ButtonPress";
+    const conhecidos = ["KeyPress", "KeyRelease", "ButtonPress", "ButtonRelease", "Motion", "Enter", "Leave", "MouseWheel", "FocusIn", "FocusOut", "Configure", "Destroy"];
+    if (!conhecidos.includes(tipo)) {
+      detalhe = tipo;
+      tipo = "KeyPress";
+    }
+    return {tipo, detalhe, mods};
+  }
+
+  function modsOk(mods, e) {
+    for (const m of mods) {
+      if (m === "Shift" && !e.shiftKey) return false;
+      if (m === "Control" && !e.ctrlKey) return false;
+      if (m === "Alt" && !e.altKey) return false;
+      if (m === "B1" && !(e.buttons & 1)) return false;
+    }
+    return true;
+  }
+
+  function dadosMouse(id, e, tipo) {
+    const r = w[id];
+    const caixa = r.el.getBoundingClientRect();
+    return {
+      type: tipo,
+      x: Math.round((e.clientX || 0) - caixa.left),
+      y: Math.round((e.clientY || 0) - caixa.top),
+      x_root: Math.round(e.clientX || 0),
+      y_root: Math.round(e.clientY || 0),
+      num: (e.button || 0) + 1,
+      delta: e.deltaY ? -Math.sign(e.deltaY) * 120 : 0,
+      widget: id,
+    };
+  }
+
+  function garantirMouse(id, alvoEl, tipo, lista) {
+    const r = w[id];
+    const chave = `${tipo}`;
+    const registro = lista.mouse || (lista.mouse = {});
+    if (registro[chave]) return;
+    registro[chave] = true;
+    const despachar = (e, duplo) => {
+      for (const b of lista.binds) {
+        if (b.tipo !== tipo) continue;
+        if (b.mods.includes("Double") !== Boolean(duplo)) continue;
+        if (b.detalhe && tipo.startsWith("Button") && String(e.button + 1) !== b.detalhe) continue;
+        if (!modsOk(b.mods, e)) continue;
+        if (tipo === "Motion" && b.mods.includes("B1") && !(e.buttons & 1)) continue;
+        const resultado = chamar(b.cid, dadosMouse(id, e, tipo));
+        if (resultado === "break") break;
+      }
+    };
+    alvoEl.addEventListener(TIPOS_MOUSE[tipo], (e) => despachar(e, false));
+    if (tipo === "ButtonPress") alvoEl.addEventListener("dblclick", (e) => despachar(e, true));
+  }
+
+  function bind(id, seq, cid) {
+    const r = w[id];
+    if (!r) return;
+    const b = {...analisarSequencia(seq), cid, seq: String(seq)};
+    r.binds = r.binds.filter((x) => x.seq !== b.seq);
+    r.binds.push(b);
+    if (TIPOS_MOUSE[b.tipo]) garantirMouse(id, r.el, b.tipo, r);
+  }
+
+  function unbind(id, seq) {
+    const r = w[id];
+    if (r) r.binds = r.binds.filter((x) => x.seq !== String(seq));
+  }
+
+  function dadosTecla(e, tipo, alvo) {
+    const keysym = e.code === "NumpadEnter" ? "KP_Enter" : NOMES[e.key] || (e.key.length === 1 ? e.key : e.key);
+    const char = e.key.length === 1 ? e.key : CARACTERES[e.key] || "";
+    return {type: tipo, keysym, char, keycode: e.keyCode || 0, state: (e.shiftKey ? 1 : 0) | (e.ctrlKey ? 4 : 0), widget: alvo};
+  }
+
+  function teclado(raizId, e, tipo) {
+    const alvoEl = e.target.closest ? e.target.closest("[data-tkid]") : null;
+    const alvoId = alvoEl ? alvoEl.dataset.tkid : raizId;
+    const dados = dadosTecla(e, tipo, alvoId);
+    const cadeia = alvoId !== raizId ? [alvoId, raizId] : [raizId];
+    let algum = false;
+    for (const id of cadeia) {
+      const r = w[id];
+      if (!r) continue;
+      let parar = false;
+      for (const b of r.binds) {
+        if (b.tipo !== tipo) continue;
+        if (b.detalhe && b.detalhe !== dados.keysym && b.detalhe !== dados.char) continue;
+        if (!modsOk(b.mods, e)) continue;
+        algum = true;
+        if (chamar(b.cid, dados) === "break") {
+          parar = true;
+          break;
+        }
+      }
+      if (parar) break;
+    }
+    const editavel = ["INPUT", "TEXTAREA"].includes(e.target.tagName);
+    if (algum && !editavel) e.preventDefault();
+  }
+
+  function after(ms, cid) {
+    afters[cid] = setTimeout(() => {
+      delete afters[cid];
+      chamar(cid, {_sem_evento: 1});
+    }, Math.max(0, Number(ms) || 0));
+  }
+
+  function cancelarAfter(cid) {
+    clearTimeout(afters[cid]);
+    delete afters[cid];
+  }
+
+  function aoMudar(id, cid) {
+    const r = w[id];
+    if (r) r.aoMudar = cid;
+  }
+
+  function aoFechar(id, cid) {
+    const r = w[id];
+    if (r) r.aoFechar = cid;
+  }
+
+  function titulo(id, texto) {
+    const r = w[id];
+    if (r && r.rotulo) r.rotulo.textContent = String(texto);
+  }
+
+  function tamanho(id, largura, altura) {
+    const r = w[id];
+    if (!r) return;
+    r.tamanho = [Number(largura), Number(altura)];
+    aparencia(id);
+  }
+
+  function focar(id) {
+    const r = w[id];
+    if (!r) return;
+    if (r.tipo === "tk") r.jan.focus({preventScroll: true});
+    else r.el.focus({preventScroll: true});
+  }
+
+  function medida(id, qual) {
+    if (id === "tela") {
+      const caixa = telas().getBoundingClientRect();
+      return Math.round(qual === "w" ? caixa.width : caixa.height);
+    }
+    const r = w[id];
+    if (!r) return 0;
+    return Math.round(qual === "w" ? r.el.offsetWidth : r.el.offsetHeight);
+  }
+
+  function rolarFim(id) {
+    const r = w[id];
+    if (r) r.el.scrollTop = r.el.scrollHeight;
+  }
+
+  function aplicarItem(item, o) {
+    const el = item.el;
+    const tipo = item.tipo;
+    if (tipo === "text") {
+      if (o.text !== undefined) el.textContent = String(o.text);
+      if (o.fill !== undefined) el.setAttribute("fill", cor(o.fill) || "none");
+      if (o.font !== undefined) el.style.font = fonte(o.font) || "";
+      if (o.anchor !== undefined) item.ancora = String(o.anchor);
+      const pa = partesAncora(item.ancora);
+      el.setAttribute("text-anchor", pa.h === "w" ? "start" : pa.h === "e" ? "end" : "middle");
+      el.setAttribute("dominant-baseline", pa.v === "n" ? "hanging" : pa.v === "s" ? "text-after-edge" : "central");
+      return;
+    }
+    if (o.fill !== undefined) el.setAttribute("fill", cor(o.fill) || "none");
+    if (o.outline !== undefined) el.setAttribute("stroke", cor(o.outline) || "none");
+    if (o.width !== undefined) el.setAttribute("stroke-width", String(o.width));
+    if (o.dash !== undefined) el.setAttribute("stroke-dasharray", Array.isArray(o.dash) ? o.dash.join(" ") : String(o.dash));
+    if (o.state !== undefined) el.style.display = o.state === "hidden" ? "none" : "";
+    if (tipo === "line" && o.fill !== undefined) {
+      el.setAttribute("stroke", cor(o.fill) || "none");
+      el.setAttribute("fill", "none");
+    }
+  }
+
+  function geometriaItem(item, c) {
+    const el = item.el;
+    item.coords = c;
+    if (item.tipo === "rectangle") {
+      el.setAttribute("x", String(Math.min(c[0], c[2])));
+      el.setAttribute("y", String(Math.min(c[1], c[3])));
+      el.setAttribute("width", String(Math.abs(c[2] - c[0])));
+      el.setAttribute("height", String(Math.abs(c[3] - c[1])));
+    } else if (item.tipo === "oval") {
+      el.setAttribute("cx", String((c[0] + c[2]) / 2));
+      el.setAttribute("cy", String((c[1] + c[3]) / 2));
+      el.setAttribute("rx", String(Math.abs(c[2] - c[0]) / 2));
+      el.setAttribute("ry", String(Math.abs(c[3] - c[1]) / 2));
+    } else if (item.tipo === "text") {
+      el.setAttribute("x", String(c[0]));
+      el.setAttribute("y", String(c[1]));
+    } else {
+      const pontos = [];
+      for (let i = 0; i + 1 < c.length; i += 2) pontos.push(`${c[i]},${c[i + 1]}`);
+      el.setAttribute("points", pontos.join(" "));
+    }
+  }
+
+  function canvasCriar(id, n, tipo, coordsJson, opcoesJson) {
+    const r = w[id];
+    if (!r || !r.svg) return;
+    const nomeSvg = {rectangle: "rect", oval: "ellipse", line: "polyline", polygon: "polygon", text: "text"}[tipo] || "polyline";
+    const el = document.createElementNS(SVGNS, nomeSvg);
+    const item = {el, tipo, coords: []};
+    if (tipo === "line") {
+      el.setAttribute("stroke", "#000");
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke-width", "1");
+    } else if (tipo === "text") {
+      el.setAttribute("fill", "#000");
+      el.style.font = fonte(["TkDefaultFont", 10]);
+    } else if (tipo === "polygon") {
+      el.setAttribute("fill", "#000");
+      el.setAttribute("stroke", "none");
+    } else {
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke", "#000");
+      el.setAttribute("stroke-width", "1");
+    }
+    r.itens[n] = item;
+    geometriaItem(item, JSON.parse(coordsJson));
+    aplicarItem(item, JSON.parse(opcoesJson));
+    r.svg.append(el);
+  }
+
+  function canvasCoords(id, n, coordsJson) {
+    const r = w[id];
+    if (r && r.itens[n]) geometriaItem(r.itens[n], JSON.parse(coordsJson));
+  }
+
+  function canvasConfig(id, n, opcoesJson) {
+    const r = w[id];
+    if (r && r.itens[n]) aplicarItem(r.itens[n], JSON.parse(opcoesJson));
+  }
+
+  function canvasDel(id, n) {
+    const r = w[id];
+    if (!r || !r.itens[n]) return;
+    r.itens[n].el.remove();
+    delete r.itens[n];
+  }
+
+  function canvasOrdem(id, n, onde) {
+    const r = w[id];
+    if (!r || !r.itens[n]) return;
+    if (onde === "topo") r.svg.append(r.itens[n].el);
+    else r.svg.prepend(r.itens[n].el);
+  }
+
+  function canvasBind(id, n, seq, cid) {
+    const r = w[id];
+    if (!r || !r.itens[n]) return;
+    const item = r.itens[n];
+    if (!item.binds) item.binds = [];
+    const b = {...analisarSequencia(seq), cid, seq: String(seq)};
+    item.binds.push(b);
+    if (TIPOS_MOUSE[b.tipo]) garantirMouse(id, item.el, b.tipo, item);
+  }
+
+  function mensagem(titulo, texto) {
+    if (typeof dialogo === "function") dialogo({titulo: titulo || "Mensagem", mensagem: texto, ok: "OK", soOk: true});
+    else setTimeout(() => window.alert(`${titulo ? titulo + "\n\n" : ""}${texto}`), 0);
+    return "ok";
+  }
+
+  function confirmar(titulo, texto) {
+    try {
+      return Boolean(window.confirm(`${titulo ? titulo + "\n\n" : ""}${texto}`));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function perguntarTexto(titulo, texto) {
+    let resposta = null;
+    try {
+      resposta = window.prompt(`${titulo ? titulo + "\n\n" : ""}${texto}`);
+    } catch (e) {
+      resposta = null;
+    }
+    return JSON.stringify(resposta === null ? {ok: false} : {ok: true, valor: resposta});
+  }
+
+  function limpar() {
+    for (const cid of Object.keys(afters)) cancelarAfter(cid);
+    for (const [id, r] of Object.entries(w)) {
+      if (r.tipo === "tk") destruir(id);
+    }
+    for (const id of Object.keys(w)) delete w[id];
+  }
+
+  function abertas() {
+    return Object.values(w).filter((r) => r.tipo === "tk").length;
+  }
+
+  return {novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
+})();
+window.TK = TK;
+
+const filaTk = [];
+let enviandoTk = false;
+
+async function enviarFilaTk() {
+  if (enviandoTk) return;
+  enviandoTk = true;
+  while (filaTk.length && processo) {
+    const lote = filaTk.splice(0, filaTk.length);
+    await API("/api/tk-evento", { id: processo.id, eventos: lote }).catch(() => {});
+  }
+  filaTk.length = 0;
+  enviandoTk = false;
+}
+
+window.tkChamar = (cid, dados) => {
+  if (!processo) return undefined;
+  filaTk.push({ cid, dados });
+  enviarFilaTk();
+  return undefined;
+};
+
+function executarTk(comando, p) {
+  const funcao = TK[comando.m];
+  let valor = null;
+  if (typeof funcao === "function") {
+    try {
+      valor = funcao(...(comando.a || []));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  if (comando.pedido) API("/api/tk-resposta", { id: p.id, pedido: comando.pedido, valor: valor === undefined ? null : valor }).catch(() => {});
+}
+const terminal = $("terminal");
+const painel = $("painel");
+const lateral = $("lateral");
+const sessoes = {};
+const problemas = {};
+const errosExecucao = {};
+const sequenciaLint = {};
+const sujos = new Set();
+const timersArquivo = {};
+let Range = null;
+let editor = null;
+let info = null;
+let estado = null;
+let processo = null;
+let projetos = [];
+let vistaLateral = "explorador";
+let conectado = true;
+let config = lerConfig();
+
+const TEMA_ESCURO = `
+.ace-pyvs-dark{background:#1E1E1E;color:#D4D4D4}
+.ace-pyvs-dark .ace_gutter{background:#1E1E1E;color:#858585}
+.ace-pyvs-dark .ace_gutter-active-line{background:transparent}
+.ace-pyvs-dark .ace_gutter-cell.ace_gutter-active-line{color:#C6C6C6}
+.ace-pyvs-dark .ace_cursor{color:#AEAFAD}
+.ace-pyvs-dark .ace_marker-layer .ace_selection{background:#264F78}
+.ace-pyvs-dark .ace_marker-layer .ace_active-line{background:transparent;border:2px solid #282828;box-sizing:border-box}
+.ace-pyvs-dark .ace_marker-layer .ace_bracket{margin:-1px 0 0 -1px;border:1px solid #888888}
+.ace-pyvs-dark .ace_marker-layer .ace_selected-word{background:#343A40;border:1px solid #575757}
+.ace-pyvs-dark .ace_print-margin{width:0;background:transparent}
+.ace-pyvs-dark .ace_placeholder{color:#6A6A6A;font-family:inherit}
+.ace-pyvs-dark .ace_keyword{color:#C586C0}
+.ace-pyvs-dark .ace_keyword.ace_operator{color:#D4D4D4}
+.ace-pyvs-dark .ace_storage,.ace-pyvs-dark .ace_constant.ace_language,.ace-pyvs-dark .ace_variable.ace_language{color:#569CD6}
+.ace-pyvs-dark .ace_constant.ace_numeric{color:#B5CEA8}
+.ace-pyvs-dark .ace_string{color:#CE9178}
+.ace-pyvs-dark .ace_comment{color:#6A9955}
+.ace-pyvs-dark .ace_support.ace_function,.ace-pyvs-dark .ace_entity.ace_name.ace_function{color:#DCDCAA}
+.ace-pyvs-dark .ace_identifier{color:#9CDCFE}
+.ace-pyvs-dark .ace_paren{color:#FFD700}
+.ace-pyvs-dark .ace_invalid{color:#F44747}
+.ace-pyvs-dark .ace_fold{background:#C586C0;border-color:#D4D4D4}
+`;
+const TEMA_CLARO = `
+.ace-pyvs-light{background:#FFFFFF;color:#000000}
+.ace-pyvs-light .ace_gutter{background:#FFFFFF;color:#237893}
+.ace-pyvs-light .ace_gutter-active-line{background:transparent}
+.ace-pyvs-light .ace_gutter-cell.ace_gutter-active-line{color:#0B216F}
+.ace-pyvs-light .ace_cursor{color:#000000}
+.ace-pyvs-light .ace_marker-layer .ace_selection{background:#ADD6FF}
+.ace-pyvs-light .ace_marker-layer .ace_active-line{background:transparent;border:2px solid #EEEEEE;box-sizing:border-box}
+.ace-pyvs-light .ace_marker-layer .ace_bracket{margin:-1px 0 0 -1px;border:1px solid #B9B9B9}
+.ace-pyvs-light .ace_marker-layer .ace_selected-word{background:#E5EBF1;border:1px solid #C9D0D9}
+.ace-pyvs-light .ace_print-margin{width:0;background:transparent}
+.ace-pyvs-light .ace_placeholder{color:#A0A0A0;font-family:inherit}
+.ace-pyvs-light .ace_keyword{color:#AF00DB}
+.ace-pyvs-light .ace_keyword.ace_operator{color:#000000}
+.ace-pyvs-light .ace_storage,.ace-pyvs-light .ace_constant.ace_language,.ace-pyvs-light .ace_variable.ace_language{color:#0000FF}
+.ace-pyvs-light .ace_constant.ace_numeric{color:#098658}
+.ace-pyvs-light .ace_string{color:#A31515}
+.ace-pyvs-light .ace_comment{color:#008000}
+.ace-pyvs-light .ace_support.ace_function,.ace-pyvs-light .ace_entity.ace_name.ace_function{color:#795E26}
+.ace-pyvs-light .ace_identifier{color:#001080}
+.ace-pyvs-light .ace_paren{color:#0431FA}
+.ace-pyvs-light .ace_invalid{color:#CD3131}
+`;
+
+const ICONE_ERRO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.3"/><path d="M5.8 5.8l4.4 4.4M10.2 5.8l-4.4 4.4"/></svg>';
+const ICONE_AVISO = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 2l6.5 11.5h-13z"/><path d="M8 6.5v3.2M8 11.6v.2"/></svg>';
+const SVG_RENOMEAR = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M10.5 2.5l3 3-8 8H2.5v-3z"/></svg>';
+const SVG_APAGAR = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M3 4h10M6 4V2.5h4V4M4.5 4l.7 9.5h5.6L11.5 4"/></svg>';
+const SVG_FECHAR = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+const SVG_BAIXAR = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M4.5 6.8L8 10.3l3.5-3.5M2.5 13.5h11"/></svg>';
+const SVG_PLAY = '<svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5z"/></svg>';
+const SVG_PARAR = '<svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3.5" width="9" height="9" rx="1"/></svg>';
+
+function ehCelular() { return window.matchMedia("(max-width: 700px)").matches; }
+function ehToque() { return window.matchMedia("(pointer: coarse)").matches; }
+function fonteAtual() { return config.fonte || (ehCelular() ? 15 : ehToque() ? 16 : 14); }
+function quebraAtual() { return typeof config.quebra === "boolean" ? config.quebra : ehCelular(); }
+
+function lerConfig() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(CHAVE_CONFIG)) || {}; } catch (e) {}
+  if (!c.tema) c.tema = "dark";
+  return c;
+}
+function salvarConfig() {
+  try { localStorage.setItem(CHAVE_CONFIG, JSON.stringify(config)); } catch (e) {}
+}
+function lerUI() {
+  try { return Object.assign({ ultimo: null, abas: {} }, JSON.parse(localStorage.getItem(CHAVE_UI)) || {}); } catch (e) { return { ultimo: null, abas: {} }; }
+}
+function salvarUI() {
+  if (!estado) return;
+  const ui = lerUI();
+  ui.ultimo = estado.nome;
+  ui.abas[estado.nome] = { abertas: estado.abertas, ativa: estado.ativa };
+  try { localStorage.setItem(CHAVE_UI, JSON.stringify(ui)); } catch (e) {}
+}
+
+let timerAviso = null;
+function avisar(texto, fixo = false) {
+  const el = $("aviso");
+  el.textContent = texto;
+  el.hidden = false;
+  clearTimeout(timerAviso);
+  if (!fixo) timerAviso = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
+function marcarConexao(ok) {
+  if (ok === conectado) return;
+  conectado = ok;
+  if (!ok) {
+    $("st-python").textContent = "✕ PyCode fechado";
+    avisar("O PyCode desligou. Toque no ícone PyCode da tela inicial para ligar de novo.", true);
+  } else {
+    $("aviso").hidden = true;
+    if (info) $("st-python").textContent = "✓ Python " + info.python;
+  }
+}
+
+async function API(caminho, corpo, bruto) {
+  const opcoes = { method: corpo === undefined ? "GET" : "POST", headers: { "X-PyCode": "1" } };
+  if (bruto) {
+    opcoes.body = corpo;
+    opcoes.headers["Content-Type"] = "application/octet-stream";
+  } else if (corpo !== undefined) {
+    opcoes.body = JSON.stringify(corpo);
+    opcoes.headers["Content-Type"] = "application/json";
+  }
+  let resposta;
+  try {
+    resposta = await fetch(caminho, opcoes);
+  } catch (e) {
+    marcarConexao(false);
+    throw new Error("sem conexão com o PyCode");
+  }
+  marcarConexao(true);
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(dados.erro || resposta.statusText);
+  return dados;
+}
+
+function modoDe(nome) { return nome.endsWith(".py") ? "ace/mode/python" : "ace/mode/text"; }
+
+function sessao(nome) {
+  if (!sessoes[nome]) {
+    const proj = estado;
+    const s = ace.createEditSession(proj.arquivos[nome], modoDe(nome));
+    s.setUndoManager(new ace.UndoManager());
+    s.setTabSize(4);
+    s.setUseSoftTabs(true);
+    s.setUseWrapMode(quebraAtual());
+    s.pyvsNome = nome;
+    s.pyvsMarcadores = [];
+    s.on("change", () => {
+      if (proj !== estado) return;
+      const atual = s.pyvsNome;
+      proj.arquivos[atual] = s.getValue();
+      if (errosExecucao[atual]) delete errosExecucao[atual];
+      marcarSujo(atual);
+      agendarLint(atual);
+    });
+    sessoes[nome] = s;
+    aplicarMarcadores(nome);
+  }
+  return sessoes[nome];
+}
+
+function marcarSujo(nome) {
+  const novo = !sujos.has(nome);
+  sujos.add(nome);
+  clearTimeout(timersArquivo[nome]);
+  timersArquivo[nome] = setTimeout(() => salvarArquivo(nome), 600);
+  if (novo) renderAbas();
+}
+
+async function salvarArquivo(nome) {
+  clearTimeout(timersArquivo[nome]);
+  if (!estado || !(nome in estado.arquivos) || !sujos.has(nome)) return;
+  const projeto = estado.nome;
+  const conteudo = estado.arquivos[nome];
+  try {
+    await API("/api/arquivo/salvar", { projeto, nome, conteudo });
+    if (estado && estado.nome === projeto && estado.arquivos[nome] === conteudo) {
+      sujos.delete(nome);
+      renderAbas();
+    }
+  } catch (e) {
+    avisar(`Não consegui salvar ${nome}: ${e.message}`);
+  }
+}
+
+async function salvarPendentes() {
+  await Promise.all([...sujos].map((n) => salvarArquivo(n)));
+}
+
+function listaProblemas(nome) {
+  return (errosExecucao[nome] ? [errosExecucao[nome]] : []).concat(problemas[nome] || []);
+}
+
+function aplicarMarcadores(nome) {
+  const s = sessoes[nome];
+  if (!s || !Range) return;
+  s.pyvsMarcadores.forEach((id) => s.removeMarker(id));
+  s.pyvsMarcadores = [];
+  const total = s.getLength();
+  const anotacoes = [];
+  listaProblemas(nome).forEach((p) => {
+    const row = Math.min(Math.max(p.linha, 1), total) - 1;
+    const texto = s.getLine(row);
+    let ini = Math.min(p.coluna, Math.max(texto.length - 1, 0));
+    let fim = p.fim && p.fim > ini ? Math.min(p.fim, Math.max(texto.length, ini + 1)) : ini + 1;
+    if (p.inteira) {
+      ini = Math.max(texto.search(/\S/), 0);
+      fim = Math.max(texto.length, ini + 1);
+    }
+    if (fim <= ini) fim = ini + 1;
+    anotacoes.push({ row, column: ini, text: p.msg, type: p.tipo });
+    s.pyvsMarcadores.push(s.addMarker(new Range(row, ini, row, fim), "pyvs-sq pyvs-sq-" + p.tipo, "text", true));
+  });
+  s.setAnnotations(anotacoes);
+}
+
+let timerLint = null;
+function agendarLint(nome) {
+  clearTimeout(timerLint);
+  timerLint = setTimeout(() => lint(nome), 450);
+}
+async function lint(nome, renderizar = true) {
+  if (!estado || !(nome in estado.arquivos)) return;
+  const projeto = estado.nome;
+  if (!nome.endsWith(".py")) {
+    problemas[nome] = [];
+  } else {
+    const seq = (sequenciaLint[nome] || 0) + 1;
+    sequenciaLint[nome] = seq;
+    try {
+      const r = await API("/api/analisar", { codigo: estado.arquivos[nome], nome, projeto });
+      if (!estado || estado.nome !== projeto || sequenciaLint[nome] !== seq) return;
+      problemas[nome] = r.problemas;
+    } catch (e) {
+      return;
+    }
+  }
+  aplicarMarcadores(nome);
+  if (renderizar) atualizarProblemas();
+}
+async function lintTodos() {
+  if (!estado) return;
+  await Promise.all(Object.keys(estado.arquivos).map((n) => lint(n, false)));
+  atualizarProblemas();
+}
+function atualizarProblemas() {
+  renderProblemas();
+  renderExplorador();
+  renderAbas();
+  atualizarDica();
+}
+
+function iconeArquivo(nome) {
+  if (nome.endsWith(".py")) {
+    return '<svg width="14" height="14" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="8" height="8" rx="2.5" fill="#3B7BBF"/><rect x="6.5" y="6.5" width="8" height="8" rx="2.5" fill="#F2C94C"/></svg>';
+  }
+  return '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 1.5H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-8z"/><path d="M9 1.5v4h4"/></svg>';
+}
+
+function botaoIcone(svg, titulo, acao) {
+  const b = document.createElement("button");
+  b.innerHTML = svg;
+  b.title = titulo;
+  b.setAttribute("aria-label", titulo);
+  b.addEventListener("click", (e) => { e.stopPropagation(); acao(); });
+  return b;
+}
+
+function classeProblemas(nome) {
+  const lista = listaProblemas(nome);
+  if (lista.some((p) => p.tipo === "error")) return "com-erro";
+  if (lista.length) return "com-aviso";
+  return "";
+}
+
+function renderExplorador() {
+  const ul = $("arquivos");
+  ul.innerHTML = "";
+  if (!estado) return;
+  $("nome-projeto").textContent = estado.nome;
+  $("nome-projeto").title = estado.nome;
+  Object.keys(estado.arquivos).sort().forEach((nome) => {
+    const li = document.createElement("li");
+    li.className = ["arquivo", nome === estado.ativa ? "ativo" : "", classeProblemas(nome)].join(" ").trim();
+    li.innerHTML = iconeArquivo(nome);
+    const span = document.createElement("span");
+    span.className = "nome";
+    span.textContent = nome;
+    const qtd = document.createElement("span");
+    qtd.className = "contagem";
+    const n = listaProblemas(nome).length;
+    qtd.textContent = n ? String(n) : "";
+    const acoes = document.createElement("div");
+    acoes.className = "acoes";
+    acoes.append(botaoIcone(SVG_RENOMEAR, "Renomear", () => renomear(nome)), botaoIcone(SVG_APAGAR, "Excluir", () => excluir(nome)));
+    li.append(span, qtd, acoes);
+    li.addEventListener("click", () => {
+      abrir(nome);
+      if (ehCelular()) alternarLateral(false);
+    });
+    li.addEventListener("dblclick", () => renomear(nome));
+    ul.append(li);
+  });
+}
+
+function renderAbas() {
+  const abas = $("abas");
+  abas.innerHTML = "";
+  if (!estado) return;
+  estado.abertas.forEach((nome) => {
+    const aba = document.createElement("div");
+    aba.className = ["aba", nome === estado.ativa ? "ativa" : "", classeProblemas(nome)].join(" ").trim();
+    aba.setAttribute("role", "tab");
+    aba.innerHTML = iconeArquivo(nome);
+    const span = document.createElement("span");
+    span.className = "nome-aba";
+    span.textContent = nome;
+    aba.append(span);
+    if (sujos.has(nome)) {
+      const ponto = document.createElement("span");
+      ponto.className = "sujo";
+      ponto.title = "Salvando…";
+      aba.append(ponto);
+    } else {
+      const fechar = botaoIcone(SVG_FECHAR, "Fechar", () => fecharAba(nome));
+      fechar.className = "fechar";
+      aba.append(fechar);
+    }
+    aba.addEventListener("click", () => abrir(nome));
+    aba.addEventListener("auxclick", (e) => { if (e.button === 1) fecharAba(nome); });
+    abas.append(aba);
+  });
+  const ativa = abas.querySelector(".ativa");
+  if (ativa) {
+    if (ativa.offsetLeft < abas.scrollLeft) abas.scrollLeft = ativa.offsetLeft;
+    else if (ativa.offsetLeft + ativa.offsetWidth > abas.scrollLeft + abas.clientWidth) abas.scrollLeft = ativa.offsetLeft + ativa.offsetWidth - abas.clientWidth;
+  }
+}
+
+function renderProblemas() {
+  const ul = $("lista-problemas");
+  ul.innerHTML = "";
+  let erros = 0;
+  let avisos = 0;
+  if (estado) {
+    Object.keys(estado.arquivos).sort().forEach((nome) => {
+      listaProblemas(nome).forEach((p) => {
+        if (p.tipo === "error") erros++; else avisos++;
+        const li = document.createElement("li");
+        li.className = "problema " + p.tipo;
+        li.innerHTML = p.tipo === "error" ? ICONE_ERRO : ICONE_AVISO;
+        const texto = document.createElement("span");
+        texto.className = "texto";
+        texto.textContent = p.msg + " ";
+        const local = document.createElement("span");
+        local.className = "local";
+        local.textContent = `${nome} [Ln ${p.linha}, Col ${p.coluna + 1}]`;
+        texto.append(local);
+        li.append(texto);
+        li.addEventListener("click", () => irPara(nome, p));
+        ul.append(li);
+      });
+    });
+  }
+  if (!erros && !avisos) ul.innerHTML = '<li class="sem-problemas">Nenhum problema encontrado.</li>';
+  const total = erros + avisos;
+  $("num-problemas").textContent = total;
+  $("selo-problemas").textContent = total;
+  $("selo-problemas").hidden = total === 0;
+  $("st-erros").textContent = erros;
+  $("st-avisos").textContent = avisos;
+}
+
+function irPara(nome, p) {
+  abrir(nome);
+  if (!editor) return;
+  editor.gotoLine(p.linha, p.coluna, true);
+  editor.focus();
+  atualizarDica();
+}
+
+function atualizarDica() {
+  const dica = $("dica");
+  if (!editor || !estado || !estado.ativa) { dica.hidden = true; return; }
+  const linha = editor.getCursorPosition().row + 1;
+  const achado = listaProblemas(estado.ativa).find((p) => p.linha === linha);
+  if (!achado) { dica.hidden = true; return; }
+  dica.className = "dica " + achado.tipo;
+  dica.querySelector("svg").outerHTML = achado.tipo === "error" ? ICONE_ERRO : ICONE_AVISO;
+  $("dica-texto").textContent = achado.msg;
+  dica.hidden = false;
+}
+
+function render() {
+  renderExplorador();
+  renderAbas();
+  renderProblemas();
+  const temArquivo = Boolean(estado && estado.ativa);
+  $("vazio").classList.toggle("visivel", !temArquivo);
+  $("ace").style.visibility = temArquivo ? "visible" : "hidden";
+  $("st-lingua").textContent = temArquivo && !estado.ativa.endsWith(".py") ? "Texto" : "Python";
+  atualizarBotaoRodar();
+  atualizarDica();
+}
+
+function abrir(nome) {
+  if (!estado || !(nome in estado.arquivos)) return;
+  if (!estado.abertas.includes(nome)) estado.abertas.push(nome);
+  estado.ativa = nome;
+  if (editor) {
+    editor.setSession(sessao(nome));
+    if (!ehToque()) editor.focus();
+  }
+  render();
+  atualizarCursor();
+  salvarUI();
+}
+
+async function fecharAba(nome) {
+  const i = estado.abertas.indexOf(nome);
+  if (i < 0) return;
+  await salvarArquivo(nome);
+  estado.abertas.splice(i, 1);
+  if (estado.ativa === nome) {
+    const proxima = estado.abertas[i] || estado.abertas[i - 1] || null;
+    estado.ativa = null;
+    if (proxima) return abrir(proxima);
+  }
+  render();
+  salvarUI();
+}
+
+function normalizar(nome) {
+  let n = nome.trim().replace(/\s+/g, "_");
+  if (!n) return null;
+  if (!n.includes(".")) n += ".py";
+  return /^[A-Za-z0-9_\-]+\.(py|txt|md|json|csv)$/i.test(n) ? n : null;
+}
+
+async function novoArquivo() {
+  if (!estado) return;
+  const entrada = prompt("Nome do novo arquivo:", "novo.py");
+  if (entrada == null) return;
+  const nome = normalizar(entrada);
+  if (!nome) return avisar("Nome inválido. Use letras, números, _ ou - e .py, .txt, .md, .json ou .csv.");
+  if (nome in estado.arquivos) return avisar("Já existe um arquivo com esse nome.");
+  try {
+    await API("/api/arquivo/salvar", { projeto: estado.nome, nome, conteudo: "" });
+  } catch (e) { return avisar(e.message); }
+  estado.arquivos[nome] = "";
+  if (ehCelular()) alternarLateral(false);
+  abrir(nome);
+  lint(nome);
+}
+
+async function renomear(nome) {
+  const entrada = prompt("Novo nome:", nome);
+  if (entrada == null) return;
+  const novo = normalizar(entrada);
+  if (!novo) return avisar("Nome inválido.");
+  if (novo === nome) return;
+  if (novo in estado.arquivos) return avisar("Já existe um arquivo com esse nome.");
+  await salvarArquivo(nome);
+  try {
+    await API("/api/arquivo/renomear", { projeto: estado.nome, nome, novo });
+  } catch (e) { return avisar(e.message); }
+  estado.arquivos[novo] = estado.arquivos[nome];
+  delete estado.arquivos[nome];
+  if (sessoes[nome]) {
+    sessoes[novo] = sessoes[nome];
+    sessoes[novo].pyvsNome = novo;
+    sessoes[novo].setMode(modoDe(novo));
+    delete sessoes[nome];
+  }
+  delete problemas[nome];
+  delete errosExecucao[nome];
+  estado.abertas = estado.abertas.map((n) => (n === nome ? novo : n));
+  if (estado.ativa === nome) estado.ativa = novo;
+  render();
+  salvarUI();
+  lintTodos();
+}
+
+async function excluir(nome) {
+  if (Object.keys(estado.arquivos).length === 1) return avisar("O projeto precisa de pelo menos um arquivo.");
+  if (!confirm(`Excluir ${nome}? Ele vai para a lixeira do PyCode.`)) return;
+  try {
+    await API("/api/arquivo/excluir", { projeto: estado.nome, nome });
+  } catch (e) { return avisar(e.message); }
+  sujos.delete(nome);
+  clearTimeout(timersArquivo[nome]);
+  const i = estado.abertas.indexOf(nome);
+  if (i >= 0) estado.abertas.splice(i, 1);
+  delete estado.arquivos[nome];
+  delete sessoes[nome];
+  delete problemas[nome];
+  delete errosExecucao[nome];
+  if (estado.ativa === nome) {
+    estado.ativa = estado.abertas[Math.max(0, i - 1)] || null;
+    if (estado.ativa) return abrir(estado.ativa);
+  }
+  render();
+  salvarUI();
+  lintTodos();
+}
+
+function quandoAtualizado(ms) {
+  const min = Math.round((Date.now() - ms) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  return new Date(ms).toLocaleDateString("pt-BR");
+}
+
+async function carregarProjetos() {
+  try {
+    projetos = (await API("/api/projetos")).projetos;
+  } catch (e) { return; }
+  if (vistaLateral === "projetos") renderProjetos();
+}
+
+function renderProjetos() {
+  const ul = $("lista-proj");
+  ul.innerHTML = "";
+  projetos.forEach((proj) => {
+    const li = document.createElement("li");
+    li.className = "proj" + (estado && proj.nome === estado.nome ? " ativo" : "");
+    const infoEl = document.createElement("div");
+    infoEl.className = "info";
+    const titulo = document.createElement("strong");
+    titulo.textContent = proj.nome;
+    const det = document.createElement("small");
+    det.textContent = `${proj.arquivos} arquivo${proj.arquivos === 1 ? "" : "s"} · ${quandoAtualizado(proj.atualizado)}`;
+    infoEl.append(titulo, det);
+    const acoes = document.createElement("div");
+    acoes.className = "acoes";
+    acoes.append(
+      botaoIcone(SVG_BAIXAR, "Exportar (.zip)", () => exportarProjeto(proj.nome)),
+      botaoIcone(SVG_RENOMEAR, "Renomear projeto", () => renomearProjeto(proj.nome)),
+      botaoIcone(SVG_APAGAR, "Excluir projeto", () => excluirProjeto(proj.nome))
+    );
+    li.append(infoEl, acoes);
+    li.addEventListener("click", async () => {
+      await abrirProjeto(proj.nome);
+      mostrarVista("explorador");
+      if (ehCelular()) alternarLateral(false);
+    });
+    ul.append(li);
+  });
+}
+
+async function abrirProjeto(nome) {
+  await salvarPendentes();
+  let dados;
+  try {
+    dados = await API("/api/projeto?nome=" + encodeURIComponent(nome));
+  } catch (e) { avisar(e.message); return false; }
+  Object.keys(sessoes).forEach((k) => delete sessoes[k]);
+  Object.keys(problemas).forEach((k) => delete problemas[k]);
+  Object.keys(errosExecucao).forEach((k) => delete errosExecucao[k]);
+  sujos.clear();
+  const pref = lerUI().abas[dados.nome] || {};
+  estado = { nome: dados.nome, arquivos: dados.arquivos, abertas: (pref.abertas || []).filter((n) => n in dados.arquivos), ativa: null };
+  const nomes = Object.keys(dados.arquivos).sort();
+  estado.ativa = pref.ativa in dados.arquivos ? pref.ativa : estado.abertas[0] || (nomes.includes("main.py") ? "main.py" : nomes[0] || null);
+  if (estado.ativa && !estado.abertas.includes(estado.ativa)) estado.abertas.push(estado.ativa);
+  if (editor) editor.setSession(estado.ativa ? sessao(estado.ativa) : ace.createEditSession(""));
+  if (!processo) terminal.innerHTML = '<span class="apagado">Pressione F5 ou ▶ para executar o arquivo aberto.</span>';
+  render();
+  atualizarCursor();
+  salvarUI();
+  lintTodos();
+  return true;
+}
+
+async function novoProjeto() {
+  const entrada = prompt("Nome do novo projeto:", "projeto");
+  if (entrada == null || !entrada.trim()) return;
+  try {
+    const r = await API("/api/projeto/criar", { nome: entrada.trim() });
+    await carregarProjetos();
+    await abrirProjeto(r.nome);
+    mostrarVista("explorador");
+    if (ehCelular()) alternarLateral(false);
+  } catch (e) { avisar(e.message); }
+}
+
+async function renomearProjeto(nome) {
+  const entrada = prompt("Novo nome do projeto:", nome);
+  if (entrada == null || !entrada.trim() || entrada.trim() === nome) return;
+  if (estado && estado.nome === nome) await salvarPendentes();
+  try {
+    const r = await API("/api/projeto/renomear", { nome, novo: entrada.trim() });
+    const ui = lerUI();
+    if (ui.abas[nome]) { ui.abas[r.nome] = ui.abas[nome]; delete ui.abas[nome]; }
+    if (ui.ultimo === nome) ui.ultimo = r.nome;
+    try { localStorage.setItem(CHAVE_UI, JSON.stringify(ui)); } catch (e) {}
+    if (estado && estado.nome === nome) {
+      estado.nome = r.nome;
+      renderExplorador();
+      salvarUI();
+    }
+    await carregarProjetos();
+  } catch (e) { avisar(e.message); }
+}
+
+async function excluirProjeto(nome) {
+  if (projetos.length === 1) return avisar("Precisa existir pelo menos um projeto.");
+  if (!confirm(`Excluir o projeto "${nome}"? Ele vai para a lixeira do PyCode (pasta .lixeira).`)) return;
+  try {
+    await API("/api/projeto/excluir", { nome });
+    await carregarProjetos();
+    if (estado && estado.nome === nome) {
+      estado = null;
+      await abrirProjeto(projetos[0].nome);
+    }
+    renderProjetos();
+  } catch (e) { avisar(e.message); }
+}
+
+async function exportarProjeto(nome) {
+  if (estado && estado.nome === nome) await salvarPendentes();
+  const a = document.createElement("a");
+  a.href = "/api/exportar?nome=" + encodeURIComponent(nome);
+  a.download = nome + ".zip";
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+function nomeImportado(nome) {
+  const limpo = nome.split(/[\\/]/).pop().replace(/[^A-Za-z0-9_.\-]+/g, "_");
+  return /^[A-Za-z0-9_\-]+\.(py|txt|md|json|csv)$/i.test(limpo) ? limpo : null;
+}
+
+async function importar(lista) {
+  if (!lista.length) return;
+  let ultimo = null;
+  let soltos = 0;
+  for (const arq of lista) {
+    try {
+      if (/\.zip$/i.test(arq.name)) {
+        const r = await API("/api/importar?nome=" + encodeURIComponent(arq.name), await arq.arrayBuffer(), true);
+        ultimo = r.nome;
+      } else if (estado) {
+        let nome = nomeImportado(arq.name);
+        if (!nome) continue;
+        if (nome in estado.arquivos) {
+          const ponto = nome.lastIndexOf(".");
+          let i = 2;
+          while (`${nome.slice(0, ponto)}_${i}${nome.slice(ponto)}` in estado.arquivos) i++;
+          nome = `${nome.slice(0, ponto)}_${i}${nome.slice(ponto)}`;
+        }
+        const conteudo = await arq.text();
+        await API("/api/arquivo/salvar", { projeto: estado.nome, nome, conteudo });
+        estado.arquivos[nome] = conteudo;
+        soltos++;
+      }
+    } catch (e) {
+      avisar(`Não consegui importar ${arq.name}: ${e.message}`);
+    }
+  }
+  await carregarProjetos();
+  if (ultimo) {
+    await abrirProjeto(ultimo);
+    avisar(`Projeto "${ultimo}" importado.`);
+  } else if (soltos) {
+    render();
+    lintTodos();
+    avisar(`${soltos} arquivo(s) adicionados a "${estado.nome}".`);
+  }
+  mostrarVista("explorador");
+  if (ehCelular()) alternarLateral(false);
+}
+
+async function recarregarArquivos() {
+  if (!estado) return;
+  const projeto = estado.nome;
+  let dados;
+  try { dados = await API("/api/projeto?nome=" + encodeURIComponent(projeto)); } catch (e) { return; }
+  if (!estado || estado.nome !== projeto) return;
+  let mudou = false;
+  Object.entries(dados.arquivos).forEach(([nome, conteudo]) => {
+    if (sujos.has(nome)) return;
+    if (!(nome in estado.arquivos)) { estado.arquivos[nome] = conteudo; mudou = true; return; }
+    if (!sessoes[nome] && estado.arquivos[nome] !== conteudo) estado.arquivos[nome] = conteudo;
+  });
+  Object.keys(estado.arquivos).forEach((nome) => {
+    if (!(nome in dados.arquivos) && !sessoes[nome] && !sujos.has(nome)) { delete estado.arquivos[nome]; mudou = true; }
+  });
+  if (mudou) { renderExplorador(); lintTodos(); }
+}
+
+function mostrarVista(vista) {
+  vistaLateral = vista;
+  const aberta = !lateral.classList.contains("fechada");
+  $("vista-explorador").hidden = vista !== "explorador";
+  $("vista-projetos").hidden = vista !== "projetos";
+  $("vista-config").hidden = vista !== "config";
+  $("lat-titulo").textContent = { explorador: "EXPLORADOR", projetos: "PROJETOS", config: "CONFIGURAÇÕES" }[vista];
+  $("btn-explorador").classList.toggle("ativo", aberta && vista === "explorador");
+  $("btn-projetos").classList.toggle("ativo", aberta && vista === "projetos");
+  $("btn-config").classList.toggle("ativo", aberta && vista === "config");
+  if (vista === "config") renderConfig();
+  if (vista === "projetos") { renderProjetos(); carregarProjetos(); }
+}
+
+function alternarLateral(forcar, vista) {
+  const destino = vista || vistaLateral;
+  const aberta = !lateral.classList.contains("fechada");
+  let abrirLat = forcar;
+  if (abrirLat === undefined) abrirLat = !(aberta && destino === vistaLateral);
+  lateral.classList.toggle("fechada", !abrirLat);
+  $("veu").hidden = !(abrirLat && ehCelular());
+  mostrarVista(destino);
+  if (editor) setTimeout(() => editor.resize(), 0);
+}
+
+function trocarAba(aba) {
+  $("aba-problemas").classList.toggle("ativa", aba === "problemas");
+  $("aba-terminal").classList.toggle("ativa", aba === "terminal");
+  $("lista-problemas").hidden = aba !== "problemas";
+  terminal.hidden = aba !== "terminal";
+  $("linha-entrada").hidden = aba !== "terminal" || !processo;
+  $("btn-limpar").hidden = aba !== "terminal";
+}
+function mostrarPainel(aba) {
+  painel.classList.remove("fechado", "min");
+  $("divisor").hidden = false;
+  if (aba) trocarAba(aba);
+}
+function minimizarPainel() {
+  if (painel.classList.contains("fechado") || processo) return;
+  painel.classList.add("min");
+  $("divisor").hidden = true;
+}
+function fecharPainel() {
+  painel.classList.add("fechado");
+  painel.classList.remove("min");
+  $("divisor").hidden = true;
+}
+function painelVisivel() {
+  return !painel.classList.contains("fechado") && !painel.classList.contains("min");
+}
+function alternarPainel(aba) {
+  if (painelVisivel()) {
+    if (aba && !$("aba-" + aba).classList.contains("ativa")) return trocarAba(aba);
+    return fecharPainel();
+  }
+  mostrarPainel(aba);
+}
+
+function escrever(texto, classe) {
+  const ultimo = terminal.lastElementChild;
+  if (ultimo && ultimo.className === (classe === "out" ? "" : classe) && ultimo.textContent.length < 4000) {
+    ultimo.textContent += texto;
+  } else {
+    const span = document.createElement("span");
+    if (classe && classe !== "out") span.className = classe;
+    span.textContent = texto;
+    terminal.append(span);
+  }
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function atualizarBotaoRodar() {
+  const botao = $("btn-rodar");
+  botao.classList.toggle("parar", Boolean(processo));
+  botao.innerHTML = processo ? SVG_PARAR : SVG_PLAY;
+  botao.title = processo ? "Parar (Shift+F5)" : "Executar arquivo (F5)";
+  botao.setAttribute("aria-label", processo ? "Parar" : "Executar");
+  botao.disabled = !processo && (!conectado || !estado || !estado.ativa || !estado.ativa.endsWith(".py"));
+}
+
+async function rodar() {
+  if (processo) return parar();
+  if (!estado || !estado.ativa) return;
+  mostrarPainel("terminal");
+  terminal.textContent = "";
+  if (!estado.ativa.endsWith(".py")) {
+    escrever("Só arquivos .py podem ser executados.\n", "err");
+    return;
+  }
+  await salvarPendentes();
+  const arquivo = estado.ativa;
+  delete errosExecucao[arquivo];
+  aplicarMarcadores(arquivo);
+  escrever(`${estado.nome} ❯ python ${arquivo}\n`, "cmd");
+  let r;
+  try {
+    r = await API("/api/rodar", { projeto: estado.nome, arquivo });
+  } catch (e) {
+    escrever(e.message + "\n", "err");
+    return;
+  }
+  TK.limpar();
+  processo = { id: r.id, desde: 0, desdeTk: 0, inicio: performance.now(), stderr: "", arquivo, projeto: estado.nome };
+  atualizarBotaoRodar();
+  trocarAba("terminal");
+  if (!ehToque()) $("entrada").focus();
+  ler();
+}
+
+async function ler() {
+  const p = processo;
+  if (!p) return;
+  try {
+    const r = await API(`/api/saida?id=${p.id}&desde=${p.desde}&desde_tk=${p.desdeTk}`);
+    r.pedacos.forEach(([tipo, texto]) => {
+      escrever(texto, tipo === "err" ? "err" : "out");
+      if (tipo === "err") p.stderr += texto;
+    });
+    p.desde = r.desde;
+    (r.tk || []).forEach((comando) => executarTk(comando, p));
+    p.desdeTk = r.desde_tk || p.desdeTk;
+    if (r.fim) return terminar(r.codigo);
+    p.ativoTk = (r.tk && r.tk.length) || TK.abertas() > 0;
+  } catch (e) {
+    escrever("\nConexão com o PyCode perdida.\n", "err");
+    return terminar(null);
+  }
+  setTimeout(ler, p.ativoTk ? 25 : 100);
+}
+
+function terminar(codigo) {
+  const p = processo;
+  processo = null;
+  TK.limpar();
+  const ms = Math.round(performance.now() - p.inicio);
+  const atual = terminal.textContent;
+  const sufixo = codigo === 0 ? "" : codigo === null ? "" : ` (código ${codigo})`;
+  escrever((atual.endsWith("\n") ? "\n" : "\n\n") + `Finalizado em ${(ms / 1000).toFixed(2)} s${sufixo}.\n`, "apagado");
+  $("linha-entrada").hidden = true;
+  atualizarBotaoRodar();
+  if (codigo) marcarErroDeTraceback(p);
+  recarregarArquivos();
+}
+
+function marcarErroDeTraceback(p) {
+  if (!estado || estado.nome !== p.projeto) return;
+  const linhas = p.stderr.trim().split(/\r?\n/);
+  const ultima = linhas[linhas.length - 1] || "Erro";
+  let alvo = null;
+  const padrao = /File "([^"]+)", line (\d+)/g;
+  let m;
+  while ((m = padrao.exec(p.stderr))) {
+    const base = m[1].split(/[\\/]/).pop();
+    if (base in estado.arquivos) alvo = { nome: base, linha: Number(m[2]) };
+  }
+  if (!alvo) return;
+  errosExecucao[alvo.nome] = { linha: alvo.linha, coluna: 0, fim: null, inteira: true, msg: "Erro ao executar: " + ultima, tipo: "error" };
+  aplicarMarcadores(alvo.nome);
+  atualizarProblemas();
+}
+
+async function parar() {
+  if (!processo) return;
+  await API("/api/parar", { id: processo.id }).catch(() => {});
+}
+
+async function enviarEntrada() {
+  if (!processo) return;
+  const campo = $("entrada");
+  const texto = campo.value;
+  campo.value = "";
+  escrever(texto + "\n", "entrada");
+  await API("/api/entrada", { id: processo.id, texto: texto + "\n" }).catch(() => {});
+}
+
+function atualizarCursor() {
+  if (!editor || !estado || !estado.ativa) return;
+  const p = editor.getCursorPosition();
+  $("st-cursor").textContent = `Ln ${p.row + 1}, Col ${p.column + 1}`;
+}
+
+function temaAtual() { return document.documentElement.dataset.theme === "light" ? "light" : "dark"; }
+
+function aplicarTema(tema) {
+  document.documentElement.dataset.theme = tema;
+  config.tema = tema;
+  salvarConfig();
+  if (editor) editor.setTheme(tema === "light" ? "ace/theme/pyvs-light" : "ace/theme/pyvs-dark");
+  renderConfig();
+}
+
+function renderConfig() {
+  $("cfg-tema").textContent = temaAtual() === "dark" ? "Escuro" : "Claro";
+  $("cfg-fonte").textContent = fonteAtual();
+  $("cfg-quebra").textContent = quebraAtual() ? "Ligada" : "Desligada";
+  $("cfg-quebra").setAttribute("aria-checked", String(quebraAtual()));
+  $("cfg-teclas").textContent = config.teclas === "on" ? "Sempre" : config.teclas === "off" ? "Nunca" : "Auto";
+  $("teclas").style.display = config.teclas === "on" ? "flex" : config.teclas === "off" ? "none" : "";
+  if (info) $("info-local").textContent = `Python ${info.python} · projetos em ${info.pasta}`;
+}
+
+function mudarFonte(delta) {
+  config.fonte = Math.min(28, Math.max(11, fonteAtual() + delta));
+  salvarConfig();
+  if (editor) editor.setFontSize(config.fonte);
+  renderConfig();
+}
+
+function definirTema(nome, classe, escuro, css) {
+  ace.define("ace/theme/" + nome, ["require", "exports", "module", "ace/lib/dom"], function (require, exports) {
+    exports.isDark = escuro;
+    exports.cssClass = classe;
+    exports.cssText = css;
+    require("ace/lib/dom").importCssString(exports.cssText, exports.cssClass, false);
+  });
+}
+
+function iniciarEditor() {
+  if (!window.ace || typeof window.ace.edit !== "function") {
+    $("vazio").innerHTML = "<strong>O editor não carregou</strong><span>Na primeira vez, o PyCode precisa de internet para baixar o editor. Conecte e abra o PyCode de novo.</span>";
+    $("vazio").classList.add("visivel");
+    return;
+  }
+  ace.config.set("basePath", "/libs/ace/");
+  Range = ace.require("ace/range").Range;
+  definirTema("pyvs-dark", "ace-pyvs-dark", true, TEMA_ESCURO);
+  definirTema("pyvs-light", "ace-pyvs-light", false, TEMA_CLARO);
+  editor = ace.edit("ace");
+  editor.setOptions({
+    fontFamily: '"Cascadia Code", Consolas, "JetBrains Mono", "Courier New", monospace',
+    fontSize: fonteAtual(),
+    showPrintMargin: false,
+    highlightActiveLine: true,
+    displayIndentGuides: true,
+    behavioursEnabled: true,
+    scrollPastEnd: 0.5,
+    fixedWidthGutter: true,
+    animatedScroll: false,
+    placeholder: "Comece a digitar seu código Python…",
+  });
+  try {
+    ace.require("ace/ext/language_tools");
+    editor.setOptions({ enableBasicAutocompletion: true, enableLiveAutocompletion: true, enableSnippets: true });
+  } catch (e) {}
+  try { editor.setKeyboardHandler("ace/keyboard/vscode"); } catch (e) {}
+  editor.setTheme(temaAtual() === "light" ? "ace/theme/pyvs-light" : "ace/theme/pyvs-dark");
+  editor.commands.addCommand({ name: "rodar", bindKey: { win: "Ctrl-Enter|F5", mac: "Command-Enter|F5" }, exec: rodar });
+  editor.commands.addCommand({ name: "parar", bindKey: { win: "Shift-F5", mac: "Shift-F5" }, exec: parar });
+  editor.commands.addCommand({ name: "painel", bindKey: { win: "Ctrl-J", mac: "Command-J" }, exec: () => alternarPainel() });
+  editor.commands.addCommand({ name: "lateral", bindKey: { win: "Ctrl-B", mac: "Command-B" }, exec: () => alternarLateral(undefined, "explorador") });
+  editor.commands.addCommand({ name: "salvar", bindKey: { win: "Ctrl-S", mac: "Command-S" }, exec: async () => { await salvarPendentes(); avisar("Salvo."); } });
+  editor.commands.addCommand({ name: "problemas", bindKey: { win: "Ctrl-Shift-M", mac: "Command-Shift-M" }, exec: () => mostrarPainel("problemas") });
+  editor.on("changeSelection", () => { atualizarCursor(); atualizarDica(); });
+  editor.on("focus", () => { if (ehCelular()) minimizarPainel(); });
+  new ResizeObserver(() => editor.resize()).observe($("ace"));
+}
+
+function iniciarDivisor() {
+  const divisor = $("divisor");
+  divisor.addEventListener("pointerdown", (e) => {
+    divisor.setPointerCapture(e.pointerId);
+    divisor.classList.add("arrastando");
+    const centro = document.querySelector(".centro").getBoundingClientRect();
+    const mover = (ev) => {
+      const altura = Math.min(Math.max(centro.bottom - ev.clientY, 80), centro.height - 120);
+      painel.style.setProperty("--altura-painel", altura + "px");
+    };
+    const soltar = () => {
+      divisor.classList.remove("arrastando");
+      divisor.removeEventListener("pointermove", mover);
+      divisor.removeEventListener("pointerup", soltar);
+      divisor.removeEventListener("pointercancel", soltar);
+    };
+    divisor.addEventListener("pointermove", mover);
+    divisor.addEventListener("pointerup", soltar);
+    divisor.addEventListener("pointercancel", soltar);
+  });
+}
+
+function acaoTecla(k) {
+  if (!editor || !estado || !estado.ativa) return;
+  if (k === "tab") editor.indent();
+  else if (k === "dedent") editor.blockOutdent();
+  else if (k === "esq") editor.navigateLeft(1);
+  else if (k === "dir") editor.navigateRight(1);
+  else if (k === "cima") editor.navigateUp(1);
+  else if (k === "baixo") editor.navigateDown(1);
+  else if (k === "undo") editor.undo();
+  else if (k === "redo") editor.redo();
+  else if (k.length === 2) {
+    editor.session.insert(editor.getCursorPosition(), k);
+    editor.navigateLeft(1);
+  } else editor.session.insert(editor.getCursorPosition(), k);
+  editor.renderer.scrollCursorIntoView();
+}
+
+function iniciarTeclas() {
+  document.querySelectorAll("#teclas button").forEach((btn) => {
+    const k = btn.dataset.k;
+    if (btn.hasAttribute("data-rep")) {
+      let espera = null;
+      let repete = null;
+      let repetiu = false;
+      const pararRep = () => { clearTimeout(espera); clearInterval(repete); espera = repete = null; };
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        repetiu = false;
+        pararRep();
+        espera = setTimeout(() => {
+          repetiu = true;
+          acaoTecla(k);
+          repete = setInterval(() => acaoTecla(k), 60);
+        }, 350);
+      });
+      btn.addEventListener("pointerup", () => {
+        const pendente = espera !== null && !repetiu;
+        pararRep();
+        if (pendente) acaoTecla(k);
+        if (editor) editor.focus();
+      });
+      btn.addEventListener("pointercancel", pararRep);
+      btn.addEventListener("pointerleave", pararRep);
+      btn.addEventListener("contextmenu", (e) => e.preventDefault());
+    } else {
+      btn.addEventListener("pointerdown", (e) => e.preventDefault());
+      btn.addEventListener("click", () => {
+        acaoTecla(k);
+        if (editor) editor.focus();
+      });
+    }
+  });
+}
+
+function ligarEventos() {
+  $("btn-explorador").addEventListener("click", () => alternarLateral(undefined, "explorador"));
+  $("btn-config").addEventListener("click", () => alternarLateral(undefined, "config"));
+  $("btn-projetos").addEventListener("click", () => alternarLateral(undefined, "projetos"));
+  $("btn-lat-config").addEventListener("click", () => mostrarVista(vistaLateral === "config" ? "explorador" : "config"));
+  $("btn-lat-projetos").addEventListener("click", () => mostrarVista(vistaLateral === "projetos" ? "explorador" : "projetos"));
+  $("btn-fechar-lat").addEventListener("click", () => alternarLateral(false));
+  $("btn-menu").addEventListener("click", () => alternarLateral(true, "explorador"));
+  $("veu").addEventListener("click", () => alternarLateral(false));
+  $("btn-rodar-lat").addEventListener("click", rodar);
+  $("btn-rodar").addEventListener("click", rodar);
+  $("btn-problemas-lat").addEventListener("click", () => alternarPainel("problemas"));
+  $("btn-terminal").addEventListener("click", () => alternarPainel("terminal"));
+  $("st-problemas").addEventListener("click", () => alternarPainel("problemas"));
+  $("dica").addEventListener("click", () => mostrarPainel("problemas"));
+  $("btn-novo").addEventListener("click", novoArquivo);
+  $("btn-novo-proj").addEventListener("click", novoProjeto);
+  $("btn-importar").addEventListener("click", () => $("entrada-arquivos").click());
+  $("entrada-arquivos").addEventListener("change", (e) => { importar(Array.from(e.target.files || [])); e.target.value = ""; });
+  $("btn-abrir-pasta").addEventListener("click", () => API("/api/abrir-pasta", {}).catch((e) => avisar(e.message)));
+  $("btn-pasta-proj").addEventListener("click", () => estado && API("/api/abrir-pasta", { projeto: estado.nome }).catch((e) => avisar(e.message)));
+  $("btn-vscode").addEventListener("click", async () => {
+    if (!estado) return;
+    await salvarPendentes();
+    API("/api/abrir-vscode", { projeto: estado.nome }).catch((e) => avisar(e.message));
+  });
+  $("btn-baixar-proj").addEventListener("click", () => estado && exportarProjeto(estado.nome));
+  $("btn-limpar").addEventListener("click", () => { terminal.innerHTML = ""; });
+  $("btn-fechar-painel").addEventListener("click", fecharPainel);
+  $("btn-min-painel").addEventListener("click", () => (painel.classList.contains("min") ? mostrarPainel() : minimizarPainel()));
+  $("aba-problemas").addEventListener("click", () => mostrarPainel("problemas"));
+  $("aba-terminal").addEventListener("click", () => mostrarPainel("terminal"));
+  $("painel-espaco").addEventListener("click", () => (painel.classList.contains("min") ? mostrarPainel() : minimizarPainel()));
+  $("entrada").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enviarEntrada(); } });
+  $("btn-enviar").addEventListener("click", enviarEntrada);
+  $("cfg-tema").addEventListener("click", () => aplicarTema(temaAtual() === "dark" ? "light" : "dark"));
+  $("cfg-menos").addEventListener("click", () => mudarFonte(-1));
+  $("cfg-mais").addEventListener("click", () => mudarFonte(1));
+  $("cfg-quebra").addEventListener("click", () => {
+    config.quebra = !quebraAtual();
+    salvarConfig();
+    Object.values(sessoes).forEach((s) => s.setUseWrapMode(config.quebra));
+    renderConfig();
+  });
+  $("cfg-teclas").addEventListener("click", () => {
+    config.teclas = config.teclas === "on" ? "off" : config.teclas === "off" ? "auto" : "on";
+    salvarConfig();
+    renderConfig();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "F5" && e.shiftKey) { e.preventDefault(); parar(); }
+    else if (e.key === "F5") { e.preventDefault(); rodar(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); salvarPendentes().then(() => avisar("Salvo.")); }
+  });
+  window.matchMedia("(max-width: 700px)").addEventListener("change", (e) => {
+    alternarLateral(e.matches ? false : window.innerWidth >= 1000);
+  });
+  window.addEventListener("beforeunload", () => {
+    sujos.forEach((nome) => {
+      if (!estado) return;
+      const corpo = JSON.stringify({ projeto: estado.nome, nome, conteudo: estado.arquivos[nome] });
+      fetch("/api/arquivo/salvar", { method: "POST", keepalive: true, headers: { "X-PyCode": "1", "Content-Type": "application/json" }, body: corpo });
+    });
+  });
+}
+
+async function iniciar() {
+  ligarEventos();
+  alternarLateral(window.innerWidth >= 1000, "explorador");
+  iniciarEditor();
+  iniciarDivisor();
+  iniciarTeclas();
+  trocarAba("terminal");
+  if (ehCelular()) minimizarPainel();
+  render();
+  renderConfig();
+  try {
+    info = await API("/api/info");
+  } catch (e) {
+    $("st-python").textContent = "✕ PyCode desligado";
+    $("vazio").innerHTML = "<strong>O PyCode está desligado</strong><span>Toque no ícone PyCode da tela inicial (Termux) para ligar. No computador, abra pelo atalho.</span>";
+    $("vazio").classList.add("visivel");
+    return;
+  }
+  $("st-python").textContent = "✓ Python " + info.python;
+  $("btn-abrir-pasta").hidden = !info.abrir_pasta;
+  $("btn-pasta-proj").hidden = !info.abrir_pasta;
+  $("btn-vscode").hidden = !info.vscode;
+  renderConfig();
+  await carregarProjetos();
+  const ultimo = lerUI().ultimo;
+  const alvo = projetos.find((p) => p.nome === ultimo) || projetos[0];
+  if (alvo) await abrirProjeto(alvo.nome);
+  else await novoProjeto();
+  setInterval(() => API("/api/vivo").catch(() => {}), 15000);
+  if ("serviceWorker" in navigator && ["127.0.0.1", "localhost"].includes(location.hostname)) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+}
+
+iniciar();
+</script>
+</body>
+</html>
