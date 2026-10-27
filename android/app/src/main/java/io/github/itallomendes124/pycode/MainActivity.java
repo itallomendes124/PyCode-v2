@@ -62,6 +62,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle estado) {
         super.onCreate(estado);
+        Lancador.contexto = getApplicationContext();
         FrameLayout raiz = new FrameLayout(this);
         raiz.setBackgroundColor(COR_FUNDO);
         tela = new WebView(this);

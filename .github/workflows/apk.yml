@@ -38,9 +38,10 @@ jobs:
       - name: Juntar o PyCode ao app
         run: |
           PY=android/app/src/main/python
-          rm -rf "$PY/web" "$PY/libs"
+          rm -rf "$PY/web" "$PY/libs" "$PY/tkinter"
           cp pycode_servidor.py "$PY/"
           cp -r web "$PY/web"
+          cp -r ponte/tkinter "$PY/tkinter"
           python3 - << 'PYTHON'
           import pathlib
           import urllib.request

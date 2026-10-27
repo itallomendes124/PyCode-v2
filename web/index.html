@@ -223,6 +223,9 @@ svg { display: block; flex: 0 0 auto; }
 .tk-text { background: #fff; border: 1px solid #7a7a7a; resize: none; font-family: "Courier New", monospace; }
 .tk-canvas { position: relative; overflow: hidden; background: #f0f0f0; }
 .tk-canvas svg { display: block; }
+.tk-listbox { background: #fff; border: 1px solid #7a7a7a; overflow-x: hidden; overflow-y: auto; text-align: left; display: block; }
+.tk-listbox .tk-item { padding: 1px 4px; white-space: pre; cursor: default; min-height: 1.25em; box-sizing: border-box; }
+.tk-listbox .tk-item.sel { background: var(--selbg, #c3c3c3); color: var(--selfg, #000); }
 .info-local { font-size: 12px; color: var(--term-apagado); line-height: 1.6; margin: 10px 0 0; word-break: break-all; }
 @media (pointer: coarse) { .linha-entrada input, .linha-entrada button { height: 40px; } }
 .aviso { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); max-width: min(92vw, 420px); padding: 10px 14px; border-radius: 6px; background: #252526; color: #fff; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4); z-index: 50; text-align: center; }
@@ -585,6 +588,13 @@ const TK = (() => {
     pai.el.append(el);
     const r = {el, tipo, pai: paiId, binds: [], grade: {col: {}, lin: {}}, mouse: {}, itens: {}};
     if (tipo === "entry") r.largura = 20;
+    if (tipo === "listbox") {
+      r.largura = 20;
+      r.altura = 10;
+      r.lista = [];
+      r.sel = [];
+      r.modo = "browse";
+    }
     if (tipo === "text") {
       r.largura = 80;
       r.altura = 24;
@@ -651,6 +661,13 @@ const TK = (() => {
       } else if (k === "show") {
         if (r.tipo === "entry") el.type = v ? "password" : "text";
       } else if (k === "activebackground") r.fundoAtivo = cor(v);
+      else if (k === "selectbackground") {
+        const c = cor(v);
+        if (c) s.setProperty("--selbg", c);
+      } else if (k === "selectforeground") {
+        const c = cor(v);
+        if (c) s.setProperty("--selfg", c);
+      } else if (k === "selectmode") r.modo = String(v);
       else if (k === "insertbackground") s.caretColor = cor(v) || "";
       else if (k === "anchor") {
         r.ancora = String(v);
@@ -665,7 +682,7 @@ const TK = (() => {
     const r = w[id];
     const el = r.el;
     const s = el.style;
-    const deTexto = ["label", "button", "entry", "text"].includes(r.tipo);
+    const deTexto = ["label", "button", "entry", "text", "listbox"].includes(r.tipo);
     let largura = "";
     let altura = "";
     if (r.largura > 0) {
@@ -848,6 +865,7 @@ const TK = (() => {
 
   function analisarSequencia(seq) {
     let s = String(seq).trim();
+    if (s.startsWith("<<") && s.endsWith(">>")) return {tipo: "Virtual", detalhe: s.slice(2, -2), mods: []};
     if (!s.startsWith("<")) return {tipo: "KeyPress", detalhe: s, mods: []};
     s = s.slice(1, -1);
     const partes = s.split("-");
@@ -1162,7 +1180,60 @@ const TK = (() => {
     return Object.values(w).filter((r) => r.tipo === "tk").length;
   }
 
-  return {novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
+  function pintarLista(id) {
+    const r = w[id];
+    if (!r || !r.lista) return;
+    Array.from(r.el.children).forEach((filho, i) => filho.classList.toggle("sel", r.sel.includes(i)));
+  }
+
+  function listaMudou(id) {
+    const r = w[id];
+    pintarLista(id);
+    if (r.aoMudar) chamar(r.aoMudar, {_interno: 1, valor: JSON.stringify(r.sel)});
+    for (const b of r.binds) {
+      if (b.tipo === "Virtual" && b.detalhe === "ListboxSelect") chamar(b.cid, {type: "virtual", widget: id, x: 0, y: 0});
+    }
+  }
+
+  function listaClique(id, indice, e) {
+    const r = w[id];
+    if (!r || r.estado === "disabled") return;
+    const multiplo = r.modo === "multiple" || (r.modo === "extended" && (e.ctrlKey || e.metaKey));
+    if (multiplo) {
+      r.sel = r.sel.includes(indice) ? r.sel.filter((i) => i !== indice) : [...r.sel, indice].sort((a, b) => a - b);
+    } else {
+      if (r.sel.length === 1 && r.sel[0] === indice) return;
+      r.sel = [indice];
+    }
+    listaMudou(id);
+  }
+
+  function listaDefinir(id, itensJson, selJson) {
+    const r = w[id];
+    if (!r || !r.lista) return;
+    r.lista = JSON.parse(itensJson);
+    r.sel = JSON.parse(selJson).filter((i) => i >= 0 && i < r.lista.length);
+    r.el.textContent = "";
+    r.lista.forEach((texto, i) => {
+      const item = document.createElement("div");
+      item.className = "tk-item";
+      item.textContent = texto;
+      item.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        listaClique(id, i, e);
+      });
+      r.el.append(item);
+    });
+    pintarLista(id);
+  }
+
+  function listaVer(id, indice) {
+    const r = w[id];
+    const filho = r && r.el.children[indice];
+    if (filho) filho.scrollIntoView({block: "nearest"});
+  }
+
+  return {listaDefinir, listaVer, novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
 })();
 window.TK = TK;
 

@@ -18,7 +18,7 @@ Roda o Python oficial do Termux e funciona sem internet depois de instalado.
 
 Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/pycode/releases).
 Ela é gerada automaticamente pelo GitHub a cada atualização do código.
-**Ainda é de teste:** abre o editor, mas o botão ▶ ainda não executa os programas.
+**Ainda é de teste:** executa programas (▶, `input()`, ■ e janelas `tkinter`), mas ainda precisa de testes em aparelho real.
 Dá para escolher a pasta dos projetos em Configurações, *Pasta dos projetos*.
 O código do app fica na pasta `android/`.
 
@@ -94,6 +94,6 @@ No Windows, para criar um atalho na área de trabalho:
 ## Limites
 
 - Projeto pessoal em evolução. Pode ter bugs.
-- O `tkinter` é parcial. Faltam `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Scrollbar`, `Menu`, `Spinbox`, `Combobox`, `Notebook` e imagens.
+- O `tkinter` é parcial. Faltam `Checkbutton`, `Radiobutton`, `Scale`, `Menu`, `Spinbox`, `Combobox`, `Notebook` e imagens.
 - Não tem `pip` embutido e não substitui o VS Code do computador.
 - **Segurança:** o servidor não tem senha. Outros apps do mesmo aparelho conseguem acessar `127.0.0.1:8765`. Instale só apps em que você confia.

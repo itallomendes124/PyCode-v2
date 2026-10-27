@@ -45,8 +45,10 @@ def iniciar(pasta):
     app = Path(__file__).resolve().parent
     os.environ["PYCODE_ANDROID"] = "1"
     os.environ["PYCODE_LIBS"] = str(app / "libs" / "ace")
+    import pycode_remoto
     import pycode_servidor as servidor
 
+    pycode_remoto.instalar()
     servidor.Config.base = Path(pasta)
     projetos = servidor.Config.projetos()
     projetos.mkdir(parents=True, exist_ok=True)

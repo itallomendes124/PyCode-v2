@@ -771,6 +771,105 @@ class Text(Widget):
     tag_config = tag_configure
 
 
+class Listbox(Widget):
+    _tipo = "listbox"
+
+    def _preparar(self):
+        self._itens = []
+        self._sel = []
+        TK.aoMudar(self._id, _registrar(self._selecionou))
+
+    def _selecionou(self, dados):
+        try:
+            self._sel = sorted(int(i) for i in json.loads(str(dados.get("valor", "[]"))))
+        except (TypeError, ValueError):
+            self._sel = []
+
+    def _enviar(self):
+        TK.listaDefinir(self._id, json.dumps(self._itens, ensure_ascii=False), json.dumps(self._sel))
+
+    def _pos(self, indice, inserir=False):
+        if indice == END:
+            return len(self._itens) if inserir else len(self._itens) - 1
+        if indice in ("active", "anchor"):
+            return self._sel[0] if self._sel else 0
+        return int(indice)
+
+    def insert(self, indice, *itens):
+        pos = max(0, min(self._pos(indice, True), len(self._itens)))
+        novos = [str(i) for i in itens]
+        self._itens[pos:pos] = novos
+        self._sel = [i + len(novos) if i >= pos else i for i in self._sel]
+        self._enviar()
+
+    def delete(self, primeiro, ultimo=None):
+        a = max(0, self._pos(primeiro))
+        b = a if ultimo is None else self._pos(ultimo)
+        b = min(b, len(self._itens) - 1)
+        if b < a:
+            return
+        quantos = b - a + 1
+        del self._itens[a:b + 1]
+        self._sel = [i - quantos if i > b else i for i in self._sel if not a <= i <= b]
+        self._enviar()
+
+    def get(self, primeiro, ultimo=None):
+        a = self._pos(primeiro)
+        if ultimo is None:
+            return self._itens[a] if 0 <= a < len(self._itens) else ""
+        b = self._pos(ultimo)
+        return tuple(self._itens[max(0, a):b + 1])
+
+    def size(self):
+        return len(self._itens)
+
+    def curselection(self):
+        return tuple(self._sel)
+
+    def selection_includes(self, indice):
+        return self._pos(indice) in self._sel
+
+    def selection_set(self, primeiro, ultimo=None):
+        a = self._pos(primeiro)
+        b = a if ultimo is None else self._pos(ultimo)
+        for i in range(max(0, a), min(b, len(self._itens) - 1) + 1):
+            if i not in self._sel:
+                self._sel.append(i)
+        self._sel.sort()
+        self._enviar()
+
+    def selection_clear(self, primeiro, ultimo=None):
+        a = self._pos(primeiro)
+        b = a if ultimo is None else self._pos(ultimo)
+        self._sel = [i for i in self._sel if not a <= i <= b]
+        self._enviar()
+
+    select_set = selection_set
+    select_clear = selection_clear
+
+    def see(self, indice):
+        TK.listaVer(self._id, self._pos(indice))
+
+    def activate(self, indice):
+        pass
+
+    def itemconfigure(self, indice, **opcoes):
+        pass
+
+    itemconfig = itemconfigure
+
+    def yview(self, *args):
+        return (0.0, 1.0)
+
+    def xview(self, *args):
+        return (0.0, 1.0)
+
+
+class Scrollbar(Frame):
+    def set(self, *args):
+        pass
+
+
 class Canvas(Widget):
     _tipo = "canvas"
 
@@ -979,7 +1078,7 @@ for _nome, _modulo in (("messagebox", messagebox), ("simpledialog", simpledialog
     sys.modules["tkinter." + _nome] = _modulo
 
 __all__ = [
-    "Tk", "Toplevel", "mainloop", "Frame", "LabelFrame", "Label", "Message", "Button", "Entry", "Text", "Canvas",
+    "Tk", "Toplevel", "mainloop", "Frame", "LabelFrame", "Label", "Message", "Button", "Entry", "Text", "Canvas", "Listbox", "Scrollbar",
     "StringVar", "IntVar", "DoubleVar", "BooleanVar", "Variable", "Event", "TclError",
     "END", "INSERT", "LEFT", "RIGHT", "TOP", "BOTTOM", "X", "Y", "BOTH", "NONE",
     "N", "S", "E", "W", "NW", "NE", "SW", "SE", "CENTER", "NS", "EW", "NSEW",
