@@ -6,17 +6,20 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.webkit.JavascriptInterface;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -42,6 +45,7 @@ import java.net.URL;
 public class MainActivity extends Activity {
     private static final int PEDIDO_ARQUIVO = 10;
     private static final int PEDIDO_PERMISSAO = 11;
+    private static final int PEDIDO_PASTA = 12;
     private static final int COR_FUNDO = Color.rgb(30, 30, 30);
     private static final String PAGINA = "<html><head><meta name='viewport' content='width=device-width'></head>"
             + "<body style='margin:0;height:100vh;display:flex;align-items:center;justify-content:center;"
@@ -124,6 +128,84 @@ public class MainActivity extends Activity {
             }
         });
         tela.setDownloadListener((endereco, agente, disposicao, tipo, tamanho) -> baixar(endereco, disposicao, tipo));
+        tela.addJavascriptInterface(new PonteJs(), "AndroidPyCode");
+    }
+
+    private class PonteJs {
+        @JavascriptInterface
+        public void escolherPasta() {
+            runOnUiThread(MainActivity.this::abrirSeletor);
+        }
+    }
+
+    private boolean podeUsar(File pasta) {
+        return (pasta.isDirectory() || pasta.mkdirs()) && pasta.canWrite();
+    }
+
+    private File caminhoDaArvore(Uri arvore) {
+        if (!"com.android.externalstorage.documents".equals(arvore.getAuthority())) {
+            return null;
+        }
+        String id = DocumentsContract.getTreeDocumentId(arvore);
+        int separador = id.indexOf(':');
+        if (separador < 0) {
+            return null;
+        }
+        String volume = id.substring(0, separador);
+        String relativo = id.substring(separador + 1);
+        File raiz = "primary".equals(volume)
+                ? Environment.getExternalStorageDirectory()
+                : new File("/storage/" + volume);
+        return relativo.isEmpty() ? raiz : new File(raiz, relativo);
+    }
+
+    private void abrirSeletor() {
+        if (Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Falta uma permissão")
+                    .setMessage("Para guardar os projetos numa pasta de sua escolha, o PyCode precisa de "
+                            + "\"Acesso a todos os arquivos\". Depois de permitir, toque em Mudar de novo.")
+                    .setPositiveButton("Permitir", (dialogo, botao) -> pedirAcessoTotal())
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+            return;
+        }
+        try {
+            startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), PEDIDO_PASTA);
+        } catch (ActivityNotFoundException erro) {
+            avisar("Nenhum app para escolher pastas.");
+        }
+    }
+
+    private void confirmarTroca(File pasta) {
+        if (!podeUsar(pasta)) {
+            avisar("Não consegui escrever nessa pasta. Escolha outra.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Mudar a pasta dos projetos")
+                .setMessage("Os projetos ficarão em:\n" + new File(pasta, "projetos").getAbsolutePath()
+                        + "\n\nCopiar os projetos atuais para lá? Nada é apagado da pasta antiga.")
+                .setPositiveButton("Copiar e mudar", (dialogo, botao) -> trocar(pasta, true))
+                .setNeutralButton("Só mudar", (dialogo, botao) -> trocar(pasta, false))
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void trocar(File pasta, boolean copiar) {
+        new Thread(() -> {
+            try {
+                PyObject modulo = Python.getInstance().getModule("pycode_android");
+                int copiados = modulo.callAttr("trocar_pasta", pasta.getAbsolutePath(), copiar).toInt();
+                SharedPreferences.Editor editor = getSharedPreferences("pycode", MODE_PRIVATE).edit();
+                editor.putString("pasta", pasta.getAbsolutePath());
+                editor.apply();
+                avisar(copiados > 0 ? "Pasta trocada. Projetos copiados: " + copiados : "Pasta trocada.");
+                runOnUiThread(() -> tela.reload());
+            } catch (Throwable erro) {
+                avisar("Não consegui trocar a pasta: " + erro.getMessage());
+            }
+        }).start();
     }
 
     private void mostrar(String texto) {
@@ -144,6 +226,15 @@ public class MainActivity extends Activity {
     }
 
     private void prepararArmazenamento() {
+        String salva = getSharedPreferences("pycode", MODE_PRIVATE).getString("pasta", null);
+        if (salva != null) {
+            File escolhida = new File(salva);
+            if (podeUsar(escolhida)) {
+                iniciar(escolhida);
+                return;
+            }
+            avisar("A pasta escolhida não está acessível. Usando a padrão.");
+        }
         if (Build.VERSION.SDK_INT >= 30) {
             if (Environment.isExternalStorageManager()) {
                 iniciar(pastaDocumentos());
@@ -232,6 +323,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int pedido, int resultado, Intent dados) {
         super.onActivityResult(pedido, resultado, dados);
+        if (pedido == PEDIDO_PASTA) {
+            if (resultado == RESULT_OK && dados != null && dados.getData() != null) {
+                File pasta = caminhoDaArvore(dados.getData());
+                if (pasta == null) {
+                    avisar("Escolha uma pasta do armazenamento do aparelho.");
+                } else {
+                    confirmarTroca(pasta);
+                }
+            }
+            return;
+        }
         if (pedido == PEDIDO_ARQUIVO && escolha != null) {
             escolha.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultado, dados));
             escolha = null;

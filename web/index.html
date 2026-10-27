@@ -323,6 +323,7 @@ svg { display: block; flex: 0 0 auto; }
       <div class="cfg-linha"><span>Tamanho da fonte</span><div class="cfg-passo"><button id="cfg-menos" aria-label="Diminuir fonte">−</button><span id="cfg-fonte">14</span><button id="cfg-mais" aria-label="Aumentar fonte">+</button></div></div>
       <div class="cfg-linha"><span>Quebra de linha</span><button class="cfg-botao" id="cfg-quebra" role="switch" aria-checked="false">Desligada</button></div>
       <div class="cfg-linha"><span>Teclas de símbolos</span><button class="cfg-botao" id="cfg-teclas" role="switch" aria-checked="false">Auto</button></div>
+      <div class="cfg-linha" id="cfg-pasta-linha" hidden><span>Pasta dos projetos</span><button class="cfg-botao" id="cfg-pasta">Mudar…</button></div>
       <p class="cfg-ajuda">Os erros são verificados enquanto você digita. Toque num item da aba Problemas para ir direto à linha.</p>
       <p class="info-local" id="info-local"></p>
     </div>
@@ -2270,6 +2271,10 @@ function ligarEventos() {
   $("painel-espaco").addEventListener("click", () => (painel.classList.contains("min") ? mostrarPainel() : minimizarPainel()));
   $("entrada").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); enviarEntrada(); } });
   $("btn-enviar").addEventListener("click", enviarEntrada);
+  if (window.AndroidPyCode && typeof window.AndroidPyCode.escolherPasta === "function") {
+    $("cfg-pasta-linha").hidden = false;
+    $("cfg-pasta").addEventListener("click", () => window.AndroidPyCode.escolherPasta());
+  }
   $("cfg-tema").addEventListener("click", () => aplicarTema(temaAtual() === "dark" ? "light" : "dark"));
   $("cfg-menos").addEventListener("click", () => mudarFonte(-1));
   $("cfg-mais").addEventListener("click", () => mudarFonte(1));
