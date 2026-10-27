@@ -14,6 +14,13 @@ Roda o Python oficial do Termux e funciona sem internet depois de instalado.
 - Exportar e importar projetos em `.zip`.
 - Barra de símbolos para tela de toque.
 
+## APK para Android (teste)
+
+Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/pycode/releases).
+Ela é gerada automaticamente pelo GitHub a cada atualização do código.
+**Ainda é de teste:** abre o editor, mas o botão ▶ ainda não executa os programas.
+O código do app fica na pasta `android/`.
+
 ## Requisitos
 
 - Android com **Termux** e **Termux:Widget**. Instale os dois da mesma origem (F-Droid ou GitHub).

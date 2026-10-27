@@ -1,0 +1,7 @@
+.gradle/
+build/
+app/build/
+local.properties
+app/src/main/python/pycode_servidor.py
+app/src/main/python/web/
+app/src/main/python/libs/

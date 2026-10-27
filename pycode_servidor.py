@@ -49,6 +49,8 @@ class Config:
 
     @classmethod
     def libs(cls):
+        if os.environ.get("PYCODE_LIBS"):
+            return Path(os.environ["PYCODE_LIBS"])
         return cls.base / ".libs" / "ace"
 
 
@@ -621,6 +623,8 @@ class Manipulador(BaseHTTPRequestHandler):
                 modulos.add("tkinter")
             return {"problemas": analisar(str(d.get("codigo", "")), str(d.get("nome", "main.py")), modulos)}
         if rota == "/api/rodar":
+            if os.environ.get("PYCODE_ANDROID") == "1":
+                raise ErroUsuario("Executar ainda não funciona no APK (versão de teste). Por enquanto, use o PyCode no Termux.")
             caminho = caminho_arquivo(d.get("projeto"), d.get("arquivo"))
             if caminho.suffix.lower() != ".py" or not caminho.exists():
                 raise ErroUsuario("Só arquivos .py salvos podem ser executados.")
