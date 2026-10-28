@@ -2106,6 +2106,7 @@ async function ler() {
 
 function terminar(codigo) {
   const p = processo;
+  if (!p) return;
   processo = null;
   TK.limpar();
   const ms = Math.round(performance.now() - p.inicio);
@@ -2137,7 +2138,9 @@ function marcarErroDeTraceback(p) {
 
 async function parar() {
   if (!processo) return;
-  await API("/api/parar", { id: processo.id }).catch(() => {});
+  const id = processo.id;
+  terminar(-9);
+  await API("/api/parar", { id }).catch(() => {});
 }
 
 async function enviarEntrada() {

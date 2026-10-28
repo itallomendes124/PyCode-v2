@@ -33,8 +33,8 @@ def trocar_pasta(nova, copiar):
             copiados += 1
     servidor.Config.base = nova
     if not any(p.is_dir() and not p.name.startswith(".") for p in destino.iterdir()):
-        (destino / "treino").mkdir()
-        (destino / "treino" / "main.py").write_text("", encoding="utf-8")
+        (destino / "PyCode v2").mkdir()
+        (destino / "PyCode v2" / "main.py").write_text("", encoding="utf-8")
     servidor.registrar(f"Pasta dos projetos trocada para {destino} ({copiados} copiados)")
     return copiados
 
@@ -53,8 +53,8 @@ def iniciar(pasta):
     projetos = servidor.Config.projetos()
     projetos.mkdir(parents=True, exist_ok=True)
     if not any(p.is_dir() for p in projetos.iterdir()):
-        (projetos / "treino").mkdir()
-        (projetos / "treino" / "main.py").write_text("", encoding="utf-8")
+        (projetos / "PyCode v2").mkdir()
+        (projetos / "PyCode v2" / "main.py").write_text("", encoding="utf-8")
     http = servidor.ThreadingHTTPServer(("127.0.0.1", 0), servidor.Manipulador)
     http.daemon_threads = True
     threading.Thread(target=http.serve_forever, daemon=True).start()

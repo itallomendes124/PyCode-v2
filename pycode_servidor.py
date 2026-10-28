@@ -780,8 +780,8 @@ def main(argumentos=None):
         sys.exit(0 if baixar_libs() else 1)
     Config.projetos().mkdir(parents=True, exist_ok=True)
     if not any(p.is_dir() for p in Config.projetos().iterdir()):
-        (Config.projetos() / "treino").mkdir()
-        (Config.projetos() / "treino" / "main.py").write_text("", encoding="utf-8")
+        (Config.projetos() / "PyCode v2").mkdir()
+        (Config.projetos() / "PyCode v2" / "main.py").write_text("", encoding="utf-8")
     url = f"http://127.0.0.1:{args.porta}/"
     if ja_rodando(args.porta):
         if not args.sem_navegador:

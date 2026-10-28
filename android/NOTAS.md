@@ -4,7 +4,7 @@ Feita automaticamente pelo GitHub a partir do código deste repositório.
 
 ## Instalar
 
-1. Baixe o `PyCode-teste.apk` abaixo, em **Assets**.
+1. Baixe o `PyCode-v2.apk` abaixo, em **Assets**.
 2. Abra o arquivo e permita "instalar apps desconhecidos" para o app de onde abriu.
 3. O aviso do Play Protect é normal: o app não está na Play Store.
 4. Na primeira abertura, o PyCode pede **Acesso a todos os arquivos** para guardar os projetos em `Documents/PyCode`.

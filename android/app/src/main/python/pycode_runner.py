@@ -199,9 +199,18 @@ def _rodar(porta, token, pasta, arquivo, erro_arquivo):
         pass
     _enviar(principal, {"t": "fim", "codigo": codigo})
     try:
-        principal.shutdown(socket.SHUT_WR)
+        principal.shutdown(socket.SHUT_RDWR)
     except OSError:
         pass
+    try:
+        principal.close()
+    except OSError:
+        pass
+    # Encerra o processo do executor imediatamente, sem esperar threads de leitura
+    # (daemon) que poderiam ficar bloqueadas em input().
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0 if codigo in (0, None) else 1)
 
 
 def executar(porta, token, pasta, arquivo, erro_arquivo=None):

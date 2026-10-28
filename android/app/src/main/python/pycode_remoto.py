@@ -149,9 +149,11 @@ class ProcessoRemoto(servidor.Processo):
                 if tipo in ("out", "err"):
                     self._anexar(tipo, str(quadro.get("d", "")))
                 elif tipo == "fim":
-                    self.codigo = int(quadro.get("codigo", 0))
+                    self._terminar(int(quadro.get("codigo", 0)))
+                    break
         except (OSError, ValueError):
             pass
+        # Se o laço terminou sem um "fim" explícito, o processo caiu: trata como encerrado.
         self._terminar(-9)
         self._fechar_canais()
 
