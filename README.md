@@ -1,4 +1,4 @@
-# PyCode v2
+# PyCode
 
 Editor de código Python estilo VS Code, feito para tablet e celular Android.
 Roda o Python oficial do Termux e funciona sem internet depois de instalado.
@@ -16,7 +16,7 @@ Roda o Python oficial do Termux e funciona sem internet depois de instalado.
 
 ## APK para Android (teste)
 
-Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/PyCode-v2/releases).
+Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/pycode/releases).
 Ela é gerada automaticamente pelo GitHub a cada atualização do código.
 **Ainda é de teste:** executa programas (▶, `input()`, ■ e janelas `tkinter`), mas ainda precisa de testes em aparelho real.
 Dá para escolher a pasta dos projetos em Configurações, *Pasta dos projetos*.
@@ -30,8 +30,8 @@ O código do app fica na pasta `android/`.
 ## Instalar no Termux
 
     pkg install -y git python
-    git clone https://github.com/itallomendes124/PyCode-v2.git
-    bash PyCode-v2/instalar_termux.sh
+    git clone https://github.com/itallomendes124/pycode.git
+    bash pycode/instalar_termux.sh
 
 Toque em **Permitir** quando o Android pedir acesso aos arquivos.
 Espere aparecer `Pronto!`.
@@ -60,7 +60,7 @@ Se algo falhar:
 
 ## Atualizar
 
-    cd ~/PyCode-v2 && git pull && bash instalar_termux.sh
+    cd ~/pycode && git pull && bash instalar_termux.sh
 
 Seus projetos não são apagados.
 
@@ -74,7 +74,7 @@ No Windows, para criar um atalho na área de trabalho:
 
 ## Estrutura
 
-    PyCode-v2/
+    pycode/
     ├── pycode_servidor.py     servidor local (só biblioteca padrão)
     ├── PyCode.pyw             abre em janela de app (Windows)
     ├── instalar_termux.sh     instalador do Termux
@@ -94,6 +94,6 @@ No Windows, para criar um atalho na área de trabalho:
 ## Limites
 
 - Projeto pessoal em evolução. Pode ter bugs.
-- O `tkinter` é parcial. Faltam `Checkbutton`, `Radiobutton`, `Scale`, `Menu`, `Spinbox`, `Combobox`, `Notebook` e imagens.
+- O `tkinter` cobre a maior parte do uso comum: `Label`, `Button`, `Entry`, `Text`, `Canvas`, `Frame`, `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Menu`, `PhotoImage` (PNG, GIF, JPEG) e, do `ttk`, `Combobox` e `Notebook`. Ainda não cobre tudo do tkinter oficial (por exemplo `Treeview`, `Canvas` com formas avançadas e temas do `ttk`).
 - Não tem `pip` embutido e não substitui o VS Code do computador.
 - **Segurança:** o servidor não tem senha. Outros apps do mesmo aparelho conseguem acessar `127.0.0.1:8765`. Instale só apps em que você confia.

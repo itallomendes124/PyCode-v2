@@ -226,6 +226,31 @@ svg { display: block; flex: 0 0 auto; }
 .tk-listbox { background: #fff; border: 1px solid #7a7a7a; overflow-x: hidden; overflow-y: auto; text-align: left; display: block; }
 .tk-listbox .tk-item { padding: 1px 4px; white-space: pre; cursor: default; min-height: 1.25em; box-sizing: border-box; }
 .tk-listbox .tk-item.sel { background: var(--selbg, #c3c3c3); color: var(--selfg, #000); }
+.tk-checkbutton, .tk-radiobutton { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: transparent; padding: 1px 2px; white-space: nowrap; }
+.tk-checkbutton input, .tk-radiobutton input { width: 16px; height: 16px; margin: 0; cursor: pointer; flex: 0 0 auto; }
+.tk-scale { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.tk-scale input[type="range"] { width: 100%; margin: 0; }
+.tk-scale .tk-scale-num { text-align: center; font-size: 12px; }
+.tk-scale.horizontal { min-width: 120px; }
+.tk-spinbox { display: inline-flex; align-items: stretch; }
+.tk-spinbox input { flex: 1; min-width: 0; border: 1px solid #7a7a7a; border-right: 0; padding: 2px 4px; background: #fff; }
+.tk-spinbox .tk-spin-botoes { display: flex; flex-direction: column; border: 1px solid #7a7a7a; }
+.tk-spinbox .tk-spin-botoes button { flex: 1; width: 20px; padding: 0; font-size: 9px; line-height: 1; background: #e1e1e1; cursor: pointer; }
+.tk-combobox { border: 1px solid #7a7a7a; background: #fff; padding: 2px 4px; min-width: 120px; }
+.tk-notebook { display: flex; flex-direction: column; border: 1px solid #c0c0c0; }
+.tk-notebook .tk-nb-abas { display: flex; flex-wrap: wrap; background: #f0f0f0; border-bottom: 1px solid #c0c0c0; }
+.tk-notebook .tk-nb-aba { padding: 5px 12px; cursor: pointer; border: 1px solid transparent; border-bottom: 0; font-size: 13px; }
+.tk-notebook .tk-nb-aba.sel { background: #fff; border-color: #c0c0c0; border-radius: 4px 4px 0 0; margin-bottom: -1px; }
+.tk-notebook .tk-nb-corpo { flex: 1; position: relative; }
+.tk-notebook .tk-nb-pagina { display: none; }
+.tk-notebook .tk-nb-pagina.sel { display: block; }
+.tk-menubar { display: flex; flex-wrap: wrap; background: #f0f0f0; border-bottom: 1px solid #c0c0c0; font: 13px "Segoe UI", system-ui, sans-serif; flex: 0 0 auto; }
+.tk-menubar .tk-menu-topo { padding: 4px 12px; cursor: pointer; user-select: none; }
+.tk-menubar .tk-menu-topo:hover, .tk-menubar .tk-menu-topo.aberto { background: #cce4f7; }
+.tk-menu-popup { position: absolute; z-index: 200; pointer-events: auto; background: #fff; border: 1px solid #adadad; box-shadow: 0 4px 14px rgba(0,0,0,0.3); min-width: 160px; padding: 2px 0; }
+.tk-menu-popup .tk-menu-item { padding: 6px 24px 6px 16px; cursor: pointer; white-space: nowrap; font: 13px "Segoe UI", system-ui, sans-serif; display: flex; justify-content: space-between; gap: 16px; }
+.tk-menu-popup .tk-menu-item:hover { background: #cce4f7; }
+.tk-menu-popup .tk-menu-sep { height: 1px; background: #d0d0d0; margin: 3px 0; }
 .info-local { font-size: 12px; color: var(--term-apagado); line-height: 1.6; margin: 10px 0 0; word-break: break-all; }
 @media (pointer: coarse) { .linha-entrada input, .linha-entrada button { height: 40px; } }
 .aviso { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); max-width: min(92vw, 420px); padding: 10px 14px; border-radius: 6px; background: #252526; color: #fff; font-size: 13px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4); z-index: 50; text-align: center; }
@@ -510,6 +535,43 @@ const TK = (() => {
       el = document.createElement("div");
       const svg = document.createElementNS(SVGNS, "svg");
       el.append(svg);
+    } else if (tipo === "checkbutton" || tipo === "radiobutton") {
+      el = document.createElement("label");
+      const entrada = document.createElement("input");
+      entrada.type = tipo === "checkbutton" ? "checkbox" : "radio";
+      const texto = document.createElement("span");
+      el.append(entrada, texto);
+    } else if (tipo === "scale") {
+      el = document.createElement("div");
+      const faixa = document.createElement("input");
+      faixa.type = "range";
+      const num = document.createElement("div");
+      num.className = "tk-scale-num";
+      el.append(faixa, num);
+    } else if (tipo === "combobox") {
+      el = document.createElement("select");
+    } else if (tipo === "notebook") {
+      el = document.createElement("div");
+      const abas = document.createElement("div");
+      abas.className = "tk-nb-abas";
+      const corpo = document.createElement("div");
+      corpo.className = "tk-nb-corpo";
+      el.append(abas, corpo);
+    } else if (tipo === "spinbox") {
+      el = document.createElement("div");
+      const campo = document.createElement("input");
+      campo.type = "text";
+      campo.inputMode = "numeric";
+      const botoes = document.createElement("div");
+      botoes.className = "tk-spin-botoes";
+      const cima = document.createElement("button");
+      cima.type = "button";
+      cima.textContent = "\u25B2";
+      const baixo = document.createElement("button");
+      baixo.type = "button";
+      baixo.textContent = "\u25BC";
+      botoes.append(cima, baixo);
+      el.append(campo, botoes);
     } else {
       el = document.createElement("div");
     }
@@ -617,6 +679,60 @@ const TK = (() => {
         if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: el.value});
       });
     }
+    if (tipo === "checkbutton") {
+      const entrada = el.querySelector("input");
+      entrada.addEventListener("change", () => {
+        const atual = w[id];
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: entrada.checked ? "1" : "0"});
+      });
+    }
+    if (tipo === "radiobutton") {
+      const entrada = el.querySelector("input");
+      entrada.addEventListener("change", () => {
+        const atual = w[id];
+        if (entrada.checked && atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: "1"});
+      });
+    }
+    if (tipo === "scale") {
+      const faixa = el.querySelector("input");
+      const num = el.querySelector(".tk-scale-num");
+      faixa.addEventListener("input", () => {
+        num.textContent = faixa.value;
+        const atual = w[id];
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: faixa.value});
+      });
+    }
+    if (tipo === "combobox") {
+      el.addEventListener("change", () => {
+        const atual = w[id];
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: el.value});
+        if (atual) for (const b of atual.binds) {
+          if (b.tipo === "Virtual" && b.detalhe === "ComboboxSelected") chamar(b.cid, {type: "virtual", widget: id, x: 0, y: 0});
+        }
+      });
+    }
+    if (tipo === "notebook") r.abas = [];
+    if (tipo === "spinbox") {
+      const campo = el.querySelector("input");
+      const [cima, baixo] = el.querySelectorAll(".tk-spin-botoes button");
+      const passo = (dir) => {
+        const atual = w[id];
+        const inc = (atual.incremento || 1) * dir;
+        let v = parseFloat(campo.value);
+        if (Number.isNaN(v)) v = atual.minimo != null ? atual.minimo : 0;
+        v += inc;
+        if (atual.minimo != null) v = Math.max(atual.minimo, v);
+        if (atual.maximo != null) v = Math.min(atual.maximo, v);
+        campo.value = String(Number(v.toFixed(10)));
+        if (atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: campo.value});
+      };
+      cima.addEventListener("click", () => passo(1));
+      baixo.addEventListener("click", () => passo(-1));
+      campo.addEventListener("input", () => {
+        const atual = w[id];
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: campo.value});
+      });
+    }
     aparencia(id);
   }
 
@@ -626,11 +742,51 @@ const TK = (() => {
     const o = JSON.parse(json);
     const el = r.el;
     const s = el.style;
+    const entrada = ["checkbutton", "radiobutton", "scale", "spinbox"].includes(r.tipo) ? el.querySelector("input") : null;
     for (const [k, v] of Object.entries(o)) {
       if (k === "text") {
         if (r.tipo === "label" || r.tipo === "button" || r.tipo === "frame") el.textContent = String(v);
+        else if (r.tipo === "checkbutton" || r.tipo === "radiobutton") el.querySelector("span").textContent = String(v);
+      } else if (k === "image") {
+        aplicarImagem(r, String(v));
+      } else if (k === "checked") {
+        if (entrada) entrada.checked = Boolean(v);
+      } else if (k === "grupo") {
+        if (entrada) entrada.name = "grp_" + String(v);
+      } else if (k === "from") {
+        if (r.tipo === "scale" && entrada) entrada.min = String(v);
+        r.minimo = Number(v);
+      } else if (k === "to") {
+        if (r.tipo === "scale" && entrada) entrada.max = String(v);
+        r.maximo = Number(v);
+      } else if (k === "resolution") {
+        if (r.tipo === "scale" && entrada) entrada.step = String(v);
+      } else if (k === "increment") {
+        r.incremento = Number(v);
+      } else if (k === "orient") {
+        if (r.tipo === "scale") el.classList.toggle("horizontal", String(v) !== "vertical");
+      } else if (k === "showvalue") {
+        if (r.tipo === "scale") el.querySelector(".tk-scale-num").style.display = v ? "" : "none";
       } else if (k === "value") {
-        if (el.value !== String(v)) el.value = String(v);
+        if (r.tipo === "scale" && entrada) {
+          entrada.value = String(v);
+          el.querySelector(".tk-scale-num").textContent = String(v);
+        } else if (entrada) {
+          if (entrada.value !== String(v)) entrada.value = String(v);
+        } else if (el.value !== undefined && el.value !== String(v)) el.value = String(v);
+      } else if (k === "values") {
+        r.valores = Array.isArray(v) ? v.map(String) : [];
+        if (r.tipo === "combobox") {
+          const atual = el.value;
+          el.textContent = "";
+          for (const op of r.valores) {
+            const o = document.createElement("option");
+            o.value = op;
+            o.textContent = op;
+            el.append(o);
+          }
+          if (r.valores.includes(atual)) el.value = atual;
+        }
       } else if (k === "font") {
         const f = fonte(v);
         if (f) s.font = f;
@@ -1037,6 +1193,15 @@ const TK = (() => {
   }
 
   function aplicarItem(item, o) {
+    if (item.tipo === "image") {
+      if (o.image !== undefined) {
+        const url = _imagens[String(o.image)] || "";
+        item.el.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
+        item.el.setAttribute("href", url);
+      }
+      if (o.anchor !== undefined) item.ancora = String(o.anchor);
+      return;
+    }
     const el = item.el;
     const tipo = item.tipo;
     if (tipo === "text") {
@@ -1076,6 +1241,10 @@ const TK = (() => {
     } else if (item.tipo === "text") {
       el.setAttribute("x", String(c[0]));
       el.setAttribute("y", String(c[1]));
+    } else if (item.tipo === "image") {
+      item.cx = c[0];
+      item.cy = c[1];
+      posicionarImagem(item);
     } else {
       const pontos = [];
       for (let i = 0; i + 1 < c.length; i += 2) pontos.push(`${c[i]},${c[i + 1]}`);
@@ -1083,12 +1252,41 @@ const TK = (() => {
     }
   }
 
+  function posicionarImagem(item) {
+    const el = item.el;
+    const larg = Number(el.getAttribute("width")) || 0;
+    const alt = Number(el.getAttribute("height")) || 0;
+    const a = item.ancora || "center";
+    let x = item.cx || 0;
+    let y = item.cy || 0;
+    if (a.includes("w")) {} else if (a.includes("e")) x -= larg; else x -= larg / 2;
+    if (a.includes("n")) {} else if (a.includes("s")) y -= alt; else y -= alt / 2;
+    el.setAttribute("x", String(x));
+    el.setAttribute("y", String(y));
+  }
+
   function canvasCriar(id, n, tipo, coordsJson, opcoesJson) {
     const r = w[id];
     if (!r || !r.svg) return;
-    const nomeSvg = {rectangle: "rect", oval: "ellipse", line: "polyline", polygon: "polygon", text: "text"}[tipo] || "polyline";
+    const nomeSvg = {rectangle: "rect", oval: "ellipse", line: "polyline", polygon: "polygon", text: "text", image: "image"}[tipo] || "polyline";
     const el = document.createElementNS(SVGNS, nomeSvg);
     const item = {el, tipo, coords: []};
+    if (tipo === "image") {
+      el.onload = () => {
+        const cx = el.getBBox ? 0 : 0;
+        posicionarImagem(item);
+      };
+      el.addEventListener("load", () => {
+        try {
+          const nat = el.getBBox();
+          if (!el.getAttribute("width") && nat.width) {
+            el.setAttribute("width", String(nat.width));
+            el.setAttribute("height", String(nat.height));
+          }
+        } catch (e) {}
+        posicionarImagem(item);
+      });
+    }
     if (tipo === "line") {
       el.setAttribute("stroke", "#000");
       el.setAttribute("fill", "none");
@@ -1208,6 +1406,154 @@ const TK = (() => {
     listaMudou(id);
   }
 
+  function nbSelecionar(id, filhoId, avisar) {
+    const r = w[id];
+    if (!r || !r.abas) return;
+    r.abaAtiva = filhoId;
+    for (const aba of r.abas) {
+      aba.botao.classList.toggle("sel", aba.filhoId === filhoId);
+      aba.pagina.classList.toggle("sel", aba.filhoId === filhoId);
+    }
+    if (avisar && r.aoMudar) chamar(r.aoMudar, {_interno: 1, valor: filhoId});
+  }
+
+  function fecharMenus() {
+    document.querySelectorAll(".tk-menu-popup").forEach((e) => e.remove());
+    document.querySelectorAll(".tk-menu-topo.aberto").forEach((e) => e.classList.remove("aberto"));
+  }
+
+  function abrirPopup(itens, x, y) {
+    fecharMenus();
+    const pop = document.createElement("div");
+    pop.className = "tk-menu-popup";
+    for (const item of itens) {
+      if (item.tipo === "separador") {
+        const sep = document.createElement("div");
+        sep.className = "tk-menu-sep";
+        pop.append(sep);
+        continue;
+      }
+      const linha = document.createElement("div");
+      linha.className = "tk-menu-item";
+      const rotulo = document.createElement("span");
+      rotulo.textContent = item.label;
+      linha.append(rotulo);
+      if (item.tipo === "submenu") {
+        const seta = document.createElement("span");
+        seta.textContent = "\u25B8";
+        linha.append(seta);
+        linha.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const caixa = linha.getBoundingClientRect();
+          const area = telas().getBoundingClientRect();
+          abrirPopup(item.itens, caixa.right - area.left, caixa.top - area.top);
+        });
+      } else {
+        linha.addEventListener("click", (e) => {
+          e.stopPropagation();
+          fecharMenus();
+          if (item.cid) chamar(item.cid, {_sem_evento: 1});
+        });
+      }
+      pop.append(linha);
+    }
+    telas().append(pop);
+    const area = telas().getBoundingClientRect();
+    const larg = pop.offsetWidth;
+    pop.style.left = Math.min(x, area.width - larg - 4) + "px";
+    pop.style.top = y + "px";
+    return pop;
+  }
+
+  const _imagens = {};
+
+  function imagemRegistrar(imgId, url) {
+    _imagens[imgId] = url;
+  }
+
+  function aplicarImagem(r, imgId) {
+    const url = _imagens[imgId] || "";
+    if (r.tipo === "label" || r.tipo === "button") {
+      let img = r.el.querySelector("img.tk-img");
+      if (!url) {
+        if (img) img.remove();
+        return;
+      }
+      if (!img) {
+        img = document.createElement("img");
+        img.className = "tk-img";
+        img.style.display = "block";
+        img.style.maxWidth = "100%";
+        r.el.textContent = "";
+        r.el.append(img);
+      }
+      img.src = url;
+    }
+  }
+
+  function menuBarra(id, arvoreJson) {
+    const r = w[id];
+    if (!r || r.tipo !== "tk") return;
+    const arvore = JSON.parse(arvoreJson);
+    let barra = r.jan.querySelector(".tk-menubar");
+    if (barra) barra.remove();
+    barra = document.createElement("div");
+    barra.className = "tk-menubar";
+    for (const topo of arvore) {
+      if (topo.tipo !== "submenu") continue;
+      const bt = document.createElement("div");
+      bt.className = "tk-menu-topo";
+      bt.textContent = topo.label;
+      bt.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const jaAberto = bt.classList.contains("aberto");
+        fecharMenus();
+        if (jaAberto) return;
+        bt.classList.add("aberto");
+        const caixa = bt.getBoundingClientRect();
+        const area = telas().getBoundingClientRect();
+        abrirPopup(topo.itens, caixa.left - area.left, caixa.bottom - area.top);
+      });
+      barra.append(bt);
+    }
+    r.jan.querySelector(".tk-barra").after(barra);
+  }
+
+  function notebookAba(id, filhoId, texto) {
+    const r = w[id];
+    const filho = w[filhoId];
+    if (!r || !filho) return;
+    const corpo = r.el.querySelector(".tk-nb-corpo");
+    const abas = r.el.querySelector(".tk-nb-abas");
+    const pagina = document.createElement("div");
+    pagina.className = "tk-nb-pagina";
+    pagina.append(filho.el);
+    filho.el.classList.remove("tk-oculto");
+    corpo.append(pagina);
+    const botao = document.createElement("div");
+    botao.className = "tk-nb-aba";
+    botao.textContent = texto;
+    botao.addEventListener("click", () => nbSelecionar(id, filhoId, true));
+    abas.append(botao);
+    r.abas.push({filhoId, botao, pagina});
+    if (r.abas.length === 1) nbSelecionar(id, filhoId);
+  }
+
+  function notebookTexto(id, filhoId, texto) {
+    const r = w[id];
+    const aba = r && r.abas && r.abas.find((a) => a.filhoId === filhoId);
+    if (aba) aba.botao.textContent = texto;
+  }
+
+  function notebookSelecionar(id, filhoId) {
+    nbSelecionar(id, filhoId);
+  }
+
+  function notebookSelecionada(id) {
+    const r = w[id];
+    return r && r.abaAtiva ? r.abaAtiva : "";
+  }
+
   function listaDefinir(id, itensJson, selJson) {
     const r = w[id];
     if (!r || !r.lista) return;
@@ -1233,7 +1579,7 @@ const TK = (() => {
     if (filho) filho.scrollIntoView({block: "nearest"});
   }
 
-  return {listaDefinir, listaVer, novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
+  return {imagemRegistrar, menuBarra, notebookAba, notebookTexto, notebookSelecionar, notebookSelecionada, listaDefinir, listaVer, novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
 })();
 window.TK = TK;
 
@@ -2106,7 +2452,6 @@ async function ler() {
 
 function terminar(codigo) {
   const p = processo;
-  if (!p) return;
   processo = null;
   TK.limpar();
   const ms = Math.round(performance.now() - p.inicio);
@@ -2138,9 +2483,7 @@ function marcarErroDeTraceback(p) {
 
 async function parar() {
   if (!processo) return;
-  const id = processo.id;
-  terminar(-9);
-  await API("/api/parar", { id }).catch(() => {});
+  await API("/api/parar", { id: processo.id }).catch(() => {});
 }
 
 async function enviarEntrada() {

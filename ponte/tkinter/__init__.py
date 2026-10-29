@@ -90,6 +90,51 @@ class TclError(Exception):
     pass
 
 
+_imagens = {}
+
+
+class PhotoImage:
+    def __init__(self, name=None, file=None, data=None, master=None, **kw):
+        import base64
+        self._id = _novo("img")
+        self._w = 0
+        self._h = 0
+        url = ""
+        try:
+            if file:
+                with open(file, "rb") as arq:
+                    bruto = arq.read()
+                ext = str(file).lower().rsplit(".", 1)[-1]
+                mime = {"png": "image/png", "gif": "image/gif", "jpg": "image/jpeg",
+                        "jpeg": "image/jpeg", "bmp": "image/bmp", "webp": "image/webp"}.get(ext, "image/png")
+                url = "data:" + mime + ";base64," + base64.b64encode(bruto).decode("ascii")
+            elif data:
+                if isinstance(data, bytes):
+                    url = "data:image/png;base64," + base64.b64encode(data).decode("ascii")
+                else:
+                    texto = str(data)
+                    url = texto if texto.startswith("data:") else "data:image/png;base64," + texto
+        except OSError as erro:
+            raise TclError(f"não consegui abrir a imagem: {erro}")
+        _imagens[self._id] = url
+        TK.imagemRegistrar(self._id, url)
+
+    def __str__(self):
+        return self._id
+
+    def width(self):
+        return self._w
+
+    def height(self):
+        return self._h
+
+    def subsample(self, *a, **k):
+        return self
+
+    def zoom(self, *a, **k):
+        return self
+
+
 _contador = [0]
 _callbacks = {}
 _widgets = {}
@@ -420,13 +465,19 @@ class Misc:
         for chave, valor in opcoes.items():
             self._opcoes[chave] = valor
             if chave == "command":
+                if getattr(self, "_command_no_python", False):
+                    continue
                 envio["command"] = _registrar(valor) if callable(valor) else None
-            elif chave == "textvariable":
+            elif chave in ("textvariable", "variable"):
                 if isinstance(valor, Variable):
                     self._ligar(valor)
                     envio.update(self._texto_da_var())
             elif chave == "text":
                 envio["text"] = str(valor)
+            elif chave == "image":
+                envio["image"] = str(valor) if valor is not None else ""
+            elif chave == "from_":
+                envio["from"] = _serializar(valor)
             else:
                 envio[chave] = _serializar(valor)
         TK.configurar(self._id, json.dumps(envio))
@@ -481,6 +532,19 @@ class Tk(Misc):
         return None
 
     wm_title = title
+
+    def configure(self, cnf=None, **opcoes):
+        if cnf:
+            opcoes = {**cnf, **opcoes}
+        menu = opcoes.pop("menu", None)
+        if menu is not None:
+            TK.menuBarra(self._id, json.dumps(menu._arvore()))
+        if "bg" in opcoes or "background" in opcoes:
+            cor_fundo = opcoes.get("bg", opcoes.get("background"))
+            TK.configurar(self._id, json.dumps({"bg": str(cor_fundo)}))
+        return None
+
+    config = configure
 
     def geometry(self, texto=None):
         if not texto:
@@ -870,6 +934,192 @@ class Scrollbar(Frame):
         pass
 
 
+class _ComValor(Widget):
+    """Base dos widgets ligados a uma variável (checkbutton, radiobutton, scale, spinbox)."""
+
+    _command_no_python = True
+
+    def _preparar(self):
+        self._valor = None
+        TK.aoMudar(self._id, _registrar(self._mudou))
+
+    def _mudou(self, dados):
+        bruto = dados.get("valor", "")
+        self._valor = self._converter(bruto)
+        if self._var is not None:
+            self._var._definir_de(self, self._valor_para_var())
+        comando = self._opcoes.get("command")
+        if callable(comando):
+            try:
+                comando(self._valor) if self._manda_valor else comando()
+            except Exception:
+                traceback.print_exc()
+
+    _manda_valor = False
+
+    def _converter(self, bruto):
+        return str(bruto)
+
+    def _valor_para_var(self):
+        return self._valor
+
+
+class Checkbutton(_ComValor):
+    _tipo = "checkbutton"
+
+    def _preparar(self):
+        super()._preparar()
+        self._ligado = 1
+        self._desligado = 0
+
+    def configure(self, cnf=None, **opcoes):
+        if cnf:
+            opcoes = {**cnf, **opcoes}
+        self._ligado = opcoes.get("onvalue", self._ligado)
+        self._desligado = opcoes.get("offvalue", self._desligado)
+        return super().configure(**opcoes)
+
+    config = configure
+
+    def _converter(self, bruto):
+        return self._ligado if str(bruto) in ("1", "True", "true") else self._desligado
+
+    def select(self):
+        self._enviar_estado(True)
+
+    def deselect(self):
+        self._enviar_estado(False)
+
+    def toggle(self):
+        self._enviar_estado(self._valor != self._ligado)
+
+    def _enviar_estado(self, marcado):
+        self._valor = self._ligado if marcado else self._desligado
+        if self._var is not None:
+            self._var._definir_de(self, self._valor)
+        TK.configurar(self._id, json.dumps({"checked": bool(marcado)}))
+
+    def _var_mudou(self, var):
+        TK.configurar(self._id, json.dumps({"checked": str(var.get()) == str(self._ligado)}))
+
+    def _texto_da_var(self):
+        return {"checked": str(self._var.get()) == str(self._ligado)}
+
+
+class Radiobutton(_ComValor):
+    _tipo = "radiobutton"
+
+    def configure(self, cnf=None, **opcoes):
+        if cnf:
+            opcoes = {**cnf, **opcoes}
+        if "value" in opcoes:
+            opcoes["value"] = str(opcoes["value"])
+        return super().configure(**opcoes)
+
+    config = configure
+
+    def _converter(self, bruto):
+        return self._opcoes.get("value", "")
+
+    def _var_mudou(self, var):
+        marcado = str(var.get()) == str(self._opcoes.get("value", ""))
+        TK.configurar(self._id, json.dumps({"checked": marcado, "grupo": str(self._var)}))
+
+    def _ligar(self, var):
+        super()._ligar(var)
+        TK.configurar(self._id, json.dumps({"grupo": str(var)}))
+
+    def _texto_da_var(self):
+        return {"grupo": str(self._var), "checked": str(self._var.get()) == str(self._opcoes.get("value", ""))}
+
+    def select(self):
+        if self._var is not None:
+            self._var.set(self._opcoes.get("value", ""))
+
+    def deselect(self):
+        pass
+
+
+class Scale(_ComValor):
+    _tipo = "scale"
+    _manda_valor = True
+
+    def _preparar(self):
+        super()._preparar()
+        self._resolucao = 1
+
+    def configure(self, cnf=None, **opcoes):
+        if cnf:
+            opcoes = {**cnf, **opcoes}
+        self._resolucao = opcoes.get("resolution", self._resolucao)
+        return super().configure(**opcoes)
+
+    config = configure
+
+    def _converter(self, bruto):
+        try:
+            v = float(bruto)
+        except (TypeError, ValueError):
+            return 0
+        return int(v) if float(self._resolucao) == int(self._resolucao) and self._resolucao >= 1 else v
+
+    def get(self):
+        if self._valor is not None:
+            return self._valor
+        if self._var is not None:
+            return self._var.get()
+        return self._opcoes.get("from_", self._opcoes.get("from", 0))
+
+    def set(self, valor):
+        self._valor = self._converter(valor)
+        if self._var is not None:
+            self._var._definir_de(self, self._valor)
+        TK.configurar(self._id, json.dumps({"value": self._valor}))
+
+    def _var_mudou(self, var):
+        TK.configurar(self._id, json.dumps({"value": var.get()}))
+
+    def _texto_da_var(self):
+        return {"value": self._var.get()}
+
+
+class Spinbox(_ComValor):
+    _tipo = "spinbox"
+
+    def _preparar(self):
+        super()._preparar()
+        self._texto = ""
+
+    def _converter(self, bruto):
+        self._texto = str(bruto)
+        return self._texto
+
+    def get(self):
+        if not self._texto and self._var is not None:
+            return str(self._var.get())
+        return self._texto
+
+    def set(self, valor):
+        self._texto = str(valor)
+        if self._var is not None:
+            self._var._definir_de(self, self._texto)
+        TK.configurar(self._id, json.dumps({"value": self._texto}))
+
+    def delete(self, primeiro, ultimo=None):
+        self.set("")
+
+    def insert(self, indice, texto):
+        self.set(self._texto + str(texto))
+
+    def _texto_da_var(self):
+        self._texto = str(self._var.get())
+        return {"value": self._texto}
+
+    def _var_mudou(self, var):
+        self._texto = str(var.get())
+        TK.configurar(self._id, json.dumps({"value": self._texto}))
+
+
 class Canvas(Widget):
     _tipo = "canvas"
 
@@ -913,8 +1163,12 @@ class Canvas(Widget):
     def create_text(self, *coords, **opcoes):
         return self._criar("text", coords, opcoes)
 
-    def create_image(self, *args, **kw):
-        raise TclError("imagens no Canvas ainda não funcionam no PyCode")
+    def create_image(self, *coords, **opcoes):
+        img = opcoes.get("image")
+        opcoes = dict(opcoes)
+        if img is not None:
+            opcoes["image"] = str(img)
+        return self._criar("image", coords, opcoes)
 
     def _alvos(self, alvo):
         if alvo in (ALL,):
@@ -1066,12 +1320,153 @@ simpledialog.askstring = _perguntar_texto
 simpledialog.askinteger = _perguntar_numero(int)
 simpledialog.askfloat = _perguntar_numero(float)
 
+class Menu:
+    def __init__(self, master=None, tearoff=0, **kw):
+        self._id = _novo("m")
+        self._mestre = master
+        self._itens = []
+
+    def add_command(self, label="", command=None, **kw):
+        cid = _registrar(command) if callable(command) else None
+        self._itens.append({"tipo": "comando", "label": str(label), "cid": cid})
+
+    def add_cascade(self, label="", menu=None, **kw):
+        self._itens.append({"tipo": "submenu", "label": str(label), "menu": menu})
+
+    def add_separator(self, **kw):
+        self._itens.append({"tipo": "separador"})
+
+    def add_checkbutton(self, label="", command=None, variable=None, **kw):
+        cid = _registrar(command) if callable(command) else None
+        self._itens.append({"tipo": "comando", "label": str(label), "cid": cid})
+
+    def add_radiobutton(self, label="", command=None, **kw):
+        cid = _registrar(command) if callable(command) else None
+        self._itens.append({"tipo": "comando", "label": str(label), "cid": cid})
+
+    def _arvore(self):
+        itens = []
+        for item in self._itens:
+            if item["tipo"] == "submenu" and item.get("menu") is not None:
+                itens.append({"tipo": "submenu", "label": item["label"], "itens": item["menu"]._arvore()})
+            elif item["tipo"] == "comando":
+                itens.append({"tipo": "comando", "label": item["label"], "cid": item["cid"]})
+            else:
+                itens.append({"tipo": "separador"})
+        return itens
+
+    def entryconfig(self, indice, **kw):
+        pass
+
+    entryconfigure = entryconfig
+
+    def delete(self, primeiro, ultimo=None):
+        a = 0 if primeiro in ("0", 0) else int(primeiro)
+        b = a if ultimo is None else (len(self._itens) if ultimo == "end" else int(ultimo))
+        del self._itens[a:b + 1]
+
+
+class Combobox(_ComValor):
+    _tipo = "combobox"
+
+    def _preparar(self):
+        super()._preparar()
+        self._texto = ""
+
+    def configure(self, cnf=None, **opcoes):
+        if cnf:
+            opcoes = {**cnf, **opcoes}
+        if "values" in opcoes:
+            opcoes["values"] = [str(v) for v in opcoes["values"]]
+        return super().configure(**opcoes)
+
+    config = configure
+
+    def _converter(self, bruto):
+        self._texto = str(bruto)
+        return self._texto
+
+    def get(self):
+        if not self._texto and self._var is not None:
+            return str(self._var.get())
+        return self._texto
+
+    def set(self, valor):
+        self._texto = str(valor)
+        if self._var is not None:
+            self._var._definir_de(self, self._texto)
+        TK.configurar(self._id, json.dumps({"value": self._texto}))
+
+    def current(self, indice=None):
+        valores = [str(v) for v in self._opcoes.get("values", [])]
+        if indice is None:
+            try:
+                return valores.index(self._texto)
+            except ValueError:
+                return -1
+        self.set(valores[int(indice)])
+
+    def _texto_da_var(self):
+        self._texto = str(self._var.get())
+        return {"value": self._texto}
+
+    def _var_mudou(self, var):
+        self._texto = str(var.get())
+        TK.configurar(self._id, json.dumps({"value": self._texto}))
+
+
+class Notebook(Widget):
+    _tipo = "notebook"
+
+    def _preparar(self):
+        self._abas = []
+        self._selecionada = None
+        TK.aoMudar(self._id, _registrar(self._aba_mudou))
+
+    def _aba_mudou(self, dados):
+        self._selecionada = str(dados.get("valor", "")) or self._selecionada
+
+    def add(self, filho, **opcoes):
+        texto = str(opcoes.get("text", ""))
+        self._abas.append(filho._id)
+        if self._selecionada is None:
+            self._selecionada = filho._id
+        TK.notebookAba(self._id, filho._id, texto)
+
+    def tab(self, aba, opcao=None, **kw):
+        alvo = aba._id if hasattr(aba, "_id") else self._abas[int(aba)] if isinstance(aba, int) else aba
+        if "text" in kw:
+            TK.notebookTexto(self._id, alvo, str(kw["text"]))
+
+    def select(self, aba=None):
+        if aba is None:
+            return self._selecionada or (self._abas[0] if self._abas else "")
+        alvo = aba._id if hasattr(aba, "_id") else self._abas[int(aba)] if isinstance(aba, int) else aba
+        self._selecionada = alvo
+        TK.notebookSelecionar(self._id, alvo)
+
+    def index(self, aba):
+        if aba == "end":
+            return len(self._abas)
+        alvo = aba._id if hasattr(aba, "_id") else aba
+        return self._abas.index(alvo) if alvo in self._abas else -1
+
+    def tabs(self):
+        return tuple(self._abas)
+
+
 ttk = _Modulo("tkinter.ttk")
 ttk.Frame = Frame
 ttk.LabelFrame = LabelFrame
 ttk.Label = Label
 ttk.Button = Button
 ttk.Entry = Entry
+ttk.Checkbutton = Checkbutton
+ttk.Radiobutton = Radiobutton
+ttk.Scale = Scale
+ttk.Spinbox = Spinbox
+ttk.Combobox = Combobox
+ttk.Notebook = Notebook
 ttk.Style = _Estilo
 
 for _nome, _modulo in (("messagebox", messagebox), ("simpledialog", simpledialog), ("ttk", ttk)):
@@ -1079,6 +1474,7 @@ for _nome, _modulo in (("messagebox", messagebox), ("simpledialog", simpledialog
 
 __all__ = [
     "Tk", "Toplevel", "mainloop", "Frame", "LabelFrame", "Label", "Message", "Button", "Entry", "Text", "Canvas", "Listbox", "Scrollbar",
+    "Checkbutton", "Radiobutton", "Scale", "Spinbox", "Combobox", "Notebook", "Menu", "PhotoImage", "ttk",
     "StringVar", "IntVar", "DoubleVar", "BooleanVar", "Variable", "Event", "TclError",
     "END", "INSERT", "LEFT", "RIGHT", "TOP", "BOTTOM", "X", "Y", "BOTH", "NONE",
     "N", "S", "E", "W", "NW", "NE", "SW", "SE", "CENTER", "NS", "EW", "NSEW",
