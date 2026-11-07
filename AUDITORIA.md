@@ -6,7 +6,7 @@ corrigido e o que **não** foi testado. Onde algo não foi verificado, está esc
 ## Resumo
 
 - Foram encontradas **4 falhas de segurança** no servidor local (uma delas só corrigida no APK), **2 melhorias de robustez** e **1 defeito de confiabilidade** (o botão preso em ■, item A7). Todos os corrigidos têm teste.
-- **106 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
+- **123 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
 - Os testes de segurança e do botão de executar foram conferidos **estragando o código de propósito**: com o defeito de volta, eles falham.
 - **Não foi testado em aparelho Android real.** Veja "O que não foi testado".
 - Durante o trabalho, o pacote `pycode-widgets.zip` desfez duas correções anteriores (botão de executar e nomes do PyCode v2). Foi corrigido e há teste de regressão. Veja o item R0.
@@ -80,8 +80,9 @@ Execução em Linux, Python 3.12, com o executor e o Chromium simulando o caminh
 | `test_tkinter.py` | 11 | widgets básicos, variáveis, layout, eventos |
 | `test_tkinter_widgets.py` | 21 | Checkbutton, Radiobutton, Scale, Spinbox, Combobox, Notebook, Menu, PhotoImage |
 | `test_calculadora.py` | 11 | contas, conversor, segurança do avaliador |
+| `test_build.py` | 17 | o build normal não muda: `pip` e identificador novo só existem na variante com bibliotecas |
 | `test_navegador.py` | 7 | página real: token, botão ▶/■, janela `tkinter`, exportar, widgets |
-| **Total** | **106** | **todos passam** |
+| **Total** | **123** | **todos passam** |
 
 Para rodar: `python3 -m unittest discover -s testes -p "test_*.py"`. Veja `testes/README.md`.
 

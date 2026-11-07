@@ -1,0 +1,72 @@
+name: APK Android (com bibliotecas)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-bibliotecas
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Instalar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Juntar o PyCode ao app
+        run: |
+          PY=android/app/src/main/python
+          rm -rf "$PY/web" "$PY/libs" "$PY/tkinter"
+          cp pycode_servidor.py "$PY/"
+          cp -r web "$PY/web"
+          cp -r ponte/tkinter "$PY/tkinter"
+          python3 - << 'PYTHON'
+          import pathlib
+          import urllib.request
+
+          import pycode_servidor as servidor
+
+          destino = pathlib.Path("android/app/src/main/python/libs/ace")
+          for nome in servidor.ARQUIVOS_ACE:
+              alvo = destino / nome
+              alvo.parent.mkdir(parents=True, exist_ok=True)
+              pedido = urllib.request.Request(servidor.URL_ACE + nome, headers={"User-Agent": "PyCode-CI"})
+              alvo.write_bytes(urllib.request.urlopen(pedido, timeout=60).read())
+              print("ok", nome, alvo.stat().st_size, "bytes")
+          PYTHON
+
+      - name: Compilar o APK
+        working-directory: android
+        run: gradle assembleDebug -Pbibliotecas --stacktrace --no-daemon
+
+      - name: Publicar na aba Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Data do dia da compilação, no horário de Teresina (UTC-3).
+          DATA=$(TZ=America/Fortaleza date +%Y-%m-%d)
+          NOME="PYcodeteste-bibliotecas-${DATA}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "${NOME}.apk"
+          echo "APK com bibliotecas: ${NOME}.apk, $(du -h "${NOME}.apk" | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          gh release delete apk-bibliotecas --yes --cleanup-tag || true
+          gh release create apk-bibliotecas "${NOME}.apk" --prerelease --target "$GITHUB_SHA" --title "PYcodeteste bibliotecas ${DATA}" --notes-file android/NOTAS-BIBLIOTECAS.md

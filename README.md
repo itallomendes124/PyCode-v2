@@ -22,6 +22,14 @@ Ela é gerada automaticamente pelo GitHub a cada atualização do código.
 Dá para escolher a pasta dos projetos em Configurações, *Pasta dos projetos*.
 O código do app fica na pasta `android/`.
 
+### Variante com bibliotecas (teste)
+Existe um segundo APK, **PyCode v2 Bib**, com **NumPy 1.26.2, Pandas 2.1.3, Matplotlib 3.8.4 e Pillow 11.0.0**.
+Ele instala ao lado do PyCode normal (outro identificador) e não o substitui.
+Para gerar: na aba **Actions** do GitHub, escolha **APK Android (com bibliotecas)** e toque em **Run workflow**.
+O arquivo sai na release `apk-bibliotecas`, com o nome `PYcodeteste-bibliotecas-AAAA-MM-DD.apk`.
+Para testar, rode `exemplos/teste_bibliotecas.py` dentro do app.
+O Matplotlib não tem janela no Android: use `matplotlib.use("Agg")` e grave o gráfico em PNG.
+
 ## Requisitos
 
 - Android com **Termux** e **Termux:Widget**. Instale os dois da mesma origem (F-Droid ou GitHub).

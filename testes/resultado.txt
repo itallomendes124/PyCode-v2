@@ -1,4 +1,4 @@
-PyCode v2 - execucao dos testes em 2026-11-07 (Linux, Python 3.12.3)
+PyCode v2 - execucao dos testes em 2026-11-06 (Linux, Python 3.12.3)
 Comando: python3 -W ignore -m unittest discover -s testes -p "test_*.py" -v
 
 test_cabecalho_fixo_1_nao_vale_mais ... ok
@@ -28,6 +28,23 @@ test_erro_nao_vaza_caminho_interno ... ok
 test_json_malformado_400 ... ok
 test_nenhuma_resposta_libera_outros_sites_via_cors ... ok
 test_rota_desconhecida_404 ... ok
+test_o_exemplo_compila_e_liga_a_ponte_de_janelas ... ok
+test_o_exemplo_usa_matplotlib_sem_janela ... ok
+test_versoes_esperadas_no_exemplo_batem_com_o_build ... ok
+test_a_opcao_so_liga_com_o_parametro ... ok
+test_chaves_e_parenteses_balanceados ... ok
+test_continua_so_arm64_e_python_313 ... ok
+test_o_identificador_base_nao_mudou ... ok
+test_o_nome_do_app_normal_continua_o_mesmo ... ok
+test_pip_e_identificador_so_existem_dentro_da_opcao ... ok
+test_versoes_fixas_das_quatro_bibliotecas ... ok
+test_grupos_de_concorrencia_diferentes ... ok
+test_nome_do_arquivo_do_apk_das_bibliotecas ... ok
+test_o_fluxo_das_bibliotecas_compila_com_a_opcao ... ok
+test_o_fluxo_das_bibliotecas_so_roda_quando_chamado ... ok
+test_o_fluxo_normal_nao_ganhou_as_bibliotecas ... ok
+test_os_dois_fluxos_nao_mexem_na_release_um_do_outro ... ok
+test_yaml_valido ... ok
 test_arquivo_compila ... ok
 test_erros_comuns ... ok
 test_funcoes_e_constantes ... ok
@@ -107,5 +124,5 @@ test_novos_widgets_existem_no_ttk ... ok
 test_photoimage_arquivo_inexistente_da_erro_claro ... ok
 test_photoimage_de_arquivo ... ok
 test_photoimage_de_bytes_vira_data_url ... ok
-Ran 106 tests in 58.114s
+Ran 123 tests in 58.325s
 OK

@@ -14,6 +14,7 @@ Usam só a biblioteca padrão (`unittest`). Nada para instalar.
     python3 -m unittest testes.test_tkinter
     python3 -m unittest testes.test_tkinter_widgets
     python3 -m unittest testes.test_calculadora
+    python3 -m unittest testes.test_build
     python3 -m unittest testes.test_navegador     # precisa do Playwright; pula sozinho sem ele
 
 ## O que cada arquivo cobre
@@ -26,6 +27,7 @@ Usam só a biblioteca padrão (`unittest`). Nada para instalar.
 | `test_tkinter.py` | widgets básicos, variáveis, `grid`/`pack`/`place`, `bind`, `after`, `Toplevel`, `Canvas` |
 | `test_tkinter_widgets.py` | `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Combobox`, `Notebook`, `Menu`, `PhotoImage` |
 | `test_calculadora.py` | `exemplos/calculadora.py`: contas, conversor e, principalmente, que o avaliador recusa código que não seja conta |
+| `test_build.py` | o build normal não muda: o `pip` e o identificador novo só existem na variante com bibliotecas, e os dois workflows não se misturam |
 | `test_navegador.py` | página real no Chromium: token, botão de executar voltando a ▶, janela `tkinter`, exportar, widgets novos |
 
 ## Como saber se um teste presta
