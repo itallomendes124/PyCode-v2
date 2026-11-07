@@ -458,6 +458,7 @@ svg { display: block; flex: 0 0 auto; }
 const CHAVE_CONFIG = "pyvs-config";
 const CHAVE_UI = "pycode-ui";
 const $ = (id) => document.getElementById(id);
+window.__PYCODE_TOKEN = (document.querySelector('meta[name="pycode-token"]') || {}).content || "";
 const TK = (() => {
   const SVGNS = "http://www.w3.org/2000/svg";
   const w = {};
@@ -1739,7 +1740,7 @@ function marcarConexao(ok) {
 }
 
 async function API(caminho, corpo, bruto) {
-  const opcoes = { method: corpo === undefined ? "GET" : "POST", headers: { "X-PyCode": "1" } };
+  const opcoes = { method: corpo === undefined ? "GET" : "POST", headers: { "X-PyCode-Token": window.__PYCODE_TOKEN } };
   if (bruto) {
     opcoes.body = corpo;
     opcoes.headers["Content-Type"] = "application/octet-stream";
@@ -2249,7 +2250,7 @@ async function excluirProjeto(nome) {
 async function exportarProjeto(nome) {
   if (estado && estado.nome === nome) await salvarPendentes();
   const a = document.createElement("a");
-  a.href = "/api/exportar?nome=" + encodeURIComponent(nome);
+  a.href = "/api/exportar?nome=" + encodeURIComponent(nome) + "&tk=" + encodeURIComponent(window.__PYCODE_TOKEN || "");
   a.download = nome + ".zip";
   document.body.append(a);
   a.click();
@@ -2452,6 +2453,7 @@ async function ler() {
 
 function terminar(codigo) {
   const p = processo;
+  if (!p) return;
   processo = null;
   TK.limpar();
   const ms = Math.round(performance.now() - p.inicio);
@@ -2483,7 +2485,9 @@ function marcarErroDeTraceback(p) {
 
 async function parar() {
   if (!processo) return;
-  await API("/api/parar", { id: processo.id }).catch(() => {});
+  const id = processo.id;
+  terminar(-9);
+  await API("/api/parar", { id }).catch(() => {});
 }
 
 async function enviarEntrada() {
@@ -2718,7 +2722,7 @@ function ligarEventos() {
     sujos.forEach((nome) => {
       if (!estado) return;
       const corpo = JSON.stringify({ projeto: estado.nome, nome, conteudo: estado.arquivos[nome] });
-      fetch("/api/arquivo/salvar", { method: "POST", keepalive: true, headers: { "X-PyCode": "1", "Content-Type": "application/json" }, body: corpo });
+      fetch("/api/arquivo/salvar", { method: "POST", keepalive: true, headers: { "X-PyCode-Token": window.__PYCODE_TOKEN, "Content-Type": "application/json" }, body: corpo });
     });
   });
 }

@@ -14,9 +14,25 @@ import threading
 import time
 import urllib.request
 import uuid
+import hmac
+import secrets
 import webbrowser
 import zipfile
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer as _ServidorBase
+
+
+class ThreadingHTTPServer(_ServidorBase):
+    """Igual ao do Python, mas sem despejar erro quando o navegador fecha a conexão.
+
+    Só erros de conexão (ConnectionResetError, BrokenPipeError...) são ignorados.
+    Qualquer outro erro continua aparecendo.
+    """
+
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], (ConnectionError, TimeoutError)):
+            return
+        super().handle_error(request, client_address)
+
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 
@@ -30,6 +46,9 @@ NOME_ARQUIVO = re.compile(r"^[A-Za-z0-9_\-]+\.(py|txt|md|json|csv)$", re.IGNOREC
 PROIBIDOS_PROJETO = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 RESERVADOS = {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(1, 10)}, *{f"LPT{i}" for i in range(1, 10)}}
 LIMITE_ARQUIVO = 1_000_000
+LIMITE_ZIP_ENTRADAS = 500
+LIMITE_ZIP_TOTAL = 20_000_000
+RAZAO_ZIP_MAXIMA = 200
 LIMITE_SAIDA = 2_000_000
 TIPOS = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json",
          ".webmanifest": "application/manifest+json", ".png": "image/png", ".ico": "image/x-icon", ".svg": "image/svg+xml"}
@@ -62,6 +81,24 @@ def registrar(msg):
     except OSError:
         pass
     print(msg)
+
+
+TOKEN = secrets.token_urlsafe(24)
+
+
+def _token_confere(texto):
+    """Compara em tempo constante. Usa bytes: texto fora do ASCII não pode gerar erro 500."""
+    return hmac.compare_digest(str(texto or "").encode("utf-8"), TOKEN.encode("utf-8"))
+
+
+def _exige_chave():
+    """No APK a página só é entregue a quem traz a chave (?k=), que só o WebView do app recebe."""
+    return os.environ.get("PYCODE_EXIGE_CHAVE") == "1"
+
+
+def _autorizado(handler):
+    enviado = handler.headers.get("X-PyCode-Token") or ""
+    return bool(enviado) and _token_confere(enviado)
 
 
 class ErroUsuario(Exception):
@@ -510,12 +547,18 @@ class Manipulador(BaseHTTPRequestHandler):
         consulta = {k: v[0] for k, v in parse_qs(url.query).items()}
         try:
             if url.path == "/api/exportar":
+                if not (_autorizado(self) or _token_confere(consulta.get("tk", ""))):
+                    return self._erro(403, "Acesso negado.")
                 return self._exportar(consulta)
+            if url.path == "/api/vivo":
+                return self._enviar(200, {"app": "pycode"})
             if url.path.startswith("/api/"):
-                if self.headers.get("X-PyCode") != "1":
+                if not _autorizado(self):
                     return self._erro(403, "Acesso negado.")
                 return self._enviar(200, self._api_get(url.path, consulta))
-            return self._estatico(url.path)
+            return self._estatico(url.path, consulta)
+        except (BrokenPipeError, ConnectionResetError):
+            return  # o navegador desistiu do pedido (por exemplo, recarregou a página)
         except ErroUsuario as erro:
             self._erro(erro.status, str(erro))
         except Exception as erro:
@@ -524,7 +567,7 @@ class Manipulador(BaseHTTPRequestHandler):
 
     def do_POST(self):
         Atividade.tocar()
-        if not self._host_ok() or self.headers.get("X-PyCode") != "1":
+        if not self._host_ok() or not _autorizado(self):
             return self._erro(403, "Acesso negado.")
         url = urlparse(self.path)
         consulta = {k: v[0] for k, v in parse_qs(url.query).items()}
@@ -532,15 +575,22 @@ class Manipulador(BaseHTTPRequestHandler):
             if url.path == "/api/importar":
                 return self._enviar(200, self._importar(consulta.get("nome", "importado"), self._corpo()))
             return self._enviar(200, self._api_post(url.path, self._json()))
+        except (BrokenPipeError, ConnectionResetError):
+            return  # o navegador desistiu do pedido (por exemplo, recarregou a página)
         except ErroUsuario as erro:
             self._erro(erro.status, str(erro))
         except Exception as erro:
             registrar(f"Erro POST {url.path}: {erro!r}")
             self._erro(500, "Erro interno do PyCode.")
 
-    def _estatico(self, caminho):
+    def _estatico(self, caminho, consulta=None):
         if caminho in ("/", "/index.html"):
-            alvo = WEB / "index.html"
+            if _exige_chave() and not _token_confere((consulta or {}).get("k", "")):
+                return self._erro(403, "Abra o PyCode pelo aplicativo.")
+            html = (WEB / "index.html").read_text(encoding="utf-8")
+            marca = f'<meta name="pycode-token" content="{TOKEN}">'
+            html = html.replace("</head>", marca + "</head>", 1)
+            return self._enviar(200, html, "text/html; charset=utf-8", {"Cache-Control": "no-cache"})
         elif caminho.startswith("/libs/ace/"):
             partes = caminho[len("/libs/ace/"):].split("/")
             if any(p in ("", ".", "..") for p in partes):
@@ -667,13 +717,25 @@ class Manipulador(BaseHTTPRequestHandler):
             pacote = zipfile.ZipFile(io.BytesIO(dados))
         except zipfile.BadZipFile:
             raise ErroUsuario("Esse arquivo não é um .zip válido.")
+        entradas = pacote.infolist()
+        if len(entradas) > LIMITE_ZIP_ENTRADAS:
+            raise ErroUsuario(f"O .zip tem entradas demais (máximo {LIMITE_ZIP_ENTRADAS}).")
+        comprimido = sum(e.compress_size for e in entradas)
+        if sum(e.file_size for e in entradas) > LIMITE_ZIP_TOTAL:
+            raise ErroUsuario("O conteúdo do .zip é grande demais.")
+        if comprimido > 0 and sum(e.file_size for e in entradas) / comprimido > RAZAO_ZIP_MAXIMA:
+            raise ErroUsuario("Esse .zip parece uma \"zip bomb\" (compressão suspeita).")
         arquivos = {}
-        for info_zip in pacote.infolist():
+        lidos = 0
+        for info_zip in entradas:
             if info_zip.is_dir() or "__MACOSX" in info_zip.filename or info_zip.file_size > LIMITE_ARQUIVO:
                 continue
             base = re.sub(r"[^A-Za-z0-9_.\-]+", "_", info_zip.filename.replace("\\", "/").split("/")[-1])
             if not NOME_ARQUIVO.match(base) or base in arquivos:
                 continue
+            lidos += info_zip.file_size
+            if lidos > LIMITE_ZIP_TOTAL:
+                raise ErroUsuario("O conteúdo do .zip é grande demais.")
             bruto = pacote.read(info_zip)
             try:
                 arquivos[base] = bruto.decode("utf-8")
@@ -701,7 +763,7 @@ class Manipulador(BaseHTTPRequestHandler):
 
 def ja_rodando(porta):
     try:
-        pedido = urllib.request.Request(f"http://127.0.0.1:{porta}/api/vivo", headers={"X-PyCode": "1"})
+        pedido = urllib.request.Request(f"http://127.0.0.1:{porta}/api/vivo")
         with urllib.request.urlopen(pedido, timeout=1.5) as resposta:
             return json.loads(resposta.read()).get("app") == "pycode"
     except Exception:

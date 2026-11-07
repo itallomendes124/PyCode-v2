@@ -1,4 +1,4 @@
-# PyCode
+# PyCode v2
 
 Editor de código Python estilo VS Code, feito para tablet e celular Android.
 Roda o Python oficial do Termux e funciona sem internet depois de instalado.
@@ -16,7 +16,7 @@ Roda o Python oficial do Termux e funciona sem internet depois de instalado.
 
 ## APK para Android (teste)
 
-Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/pycode/releases).
+Há uma versão em APK, sem Termux, na aba [Releases](https://github.com/itallomendes124/PyCode-v2/releases).
 Ela é gerada automaticamente pelo GitHub a cada atualização do código.
 **Ainda é de teste:** executa programas (▶, `input()`, ■ e janelas `tkinter`), mas ainda precisa de testes em aparelho real.
 Dá para escolher a pasta dos projetos em Configurações, *Pasta dos projetos*.
@@ -30,8 +30,8 @@ O código do app fica na pasta `android/`.
 ## Instalar no Termux
 
     pkg install -y git python
-    git clone https://github.com/itallomendes124/pycode.git
-    bash pycode/instalar_termux.sh
+    git clone https://github.com/itallomendes124/PyCode-v2.git
+    bash PyCode-v2/instalar_termux.sh
 
 Toque em **Permitir** quando o Android pedir acesso aos arquivos.
 Espere aparecer `Pronto!`.
@@ -60,7 +60,7 @@ Se algo falhar:
 
 ## Atualizar
 
-    cd ~/pycode && git pull && bash instalar_termux.sh
+    cd ~/PyCode-v2 && git pull && bash instalar_termux.sh
 
 Seus projetos não são apagados.
 
@@ -74,7 +74,7 @@ No Windows, para criar um atalho na área de trabalho:
 
 ## Estrutura
 
-    pycode/
+    PyCode-v2/
     ├── pycode_servidor.py     servidor local (só biblioteca padrão)
     ├── PyCode.pyw             abre em janela de app (Windows)
     ├── instalar_termux.sh     instalador do Termux
@@ -94,6 +94,29 @@ No Windows, para criar um atalho na área de trabalho:
 ## Limites
 
 - Projeto pessoal em evolução. Pode ter bugs.
-- O `tkinter` cobre a maior parte do uso comum: `Label`, `Button`, `Entry`, `Text`, `Canvas`, `Frame`, `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Menu`, `PhotoImage` (PNG, GIF, JPEG) e, do `ttk`, `Combobox` e `Notebook`. Ainda não cobre tudo do tkinter oficial (por exemplo `Treeview`, `Canvas` com formas avançadas e temas do `ttk`).
+- O `tkinter` próprio manda comandos de desenho para a página.
 - Não tem `pip` embutido e não substitui o VS Code do computador.
 - **Segurança:** o servidor não tem senha. Outros apps do mesmo aparelho conseguem acessar `127.0.0.1:8765`. Instale só apps em que você confia.
+- O PyCode do Android não tem `pip`, e bibliotecas como NumPy, Pandas e PyTorch não rodam nele (precisam de código nativo compilado para o aparelho). No computador, o PyCode usa o seu Python e o `pip` normal.
+- O PyCode não substitui o VS Code do computador.
+
+## Segurança
+O PyCode abre um servidor só no seu aparelho (`127.0.0.1`). O que protege os seus projetos:
+
+- **Token por sessão.** Cada vez que o servidor liga, ele sorteia um token novo, e todas as rotas da API (inclusive exportar) exigem esse token. Isso impede que um **site** aberto no navegador leia ou altere seus projetos por esse servidor.
+- **Chave de abertura (app Android).** No APK, a própria página só é entregue a quem traz a chave (`?k=`), que só o WebView do app recebe. Assim, outro **app** instalado no aparelho não consegue pegar o token só pedindo a página.
+- **Checagem de `Host`** (contra DNS rebinding), validação de nomes de arquivo e de projeto, e limites ao importar `.zip` (número de entradas, tamanho total e taxa de compressão).
+
+**O que continua sem proteção:**
+
+- No **Termux e no computador** a página é aberta pelo navegador e não existe chave de abertura. Outro programa rodando no mesmo aparelho pode pedir a página e pegar o token. Nesses casos o token protege contra sites, não contra programas locais.
+- O código Python que você executa roda com as permissões do app. Ele pode ler e apagar os arquivos que o app enxerga. Rode só código em que você confia.
+
+Os detalhes, as provas e os riscos que ficaram estão em `AUDITORIA.md`.
+
+## Testes
+Os testes usam só a biblioteca padrão do Python:
+
+    python3 -m unittest discover -s testes -p "test_*.py"
+
+Veja `testes/README.md` para rodar por área.

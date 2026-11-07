@@ -44,6 +44,7 @@ def iniciar(pasta):
         return _estado["porta"]
     app = Path(__file__).resolve().parent
     os.environ["PYCODE_ANDROID"] = "1"
+    os.environ["PYCODE_EXIGE_CHAVE"] = "1"
     os.environ["PYCODE_LIBS"] = str(app / "libs" / "ace")
     import pycode_remoto
     import pycode_servidor as servidor
@@ -61,3 +62,9 @@ def iniciar(pasta):
     _estado["porta"] = http.server_address[1]
     servidor.registrar(f"PyCode (Android) em http://127.0.0.1:{_estado['porta']}/  (projetos em {projetos})")
     return _estado["porta"]
+
+
+def chave():
+    """Chave de abertura da página. Só o WebView do app a recebe (via MainActivity)."""
+    import pycode_servidor
+    return pycode_servidor.TOKEN

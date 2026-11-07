@@ -214,7 +214,8 @@ public class MainActivity extends Activity {
     }
 
     private void abrirEditor() {
-        tela.loadUrl("http://127.0.0.1:" + porta + "/");
+        String chave = Python.getInstance().getModule("pycode_android").callAttr("chave").toString();
+        tela.loadUrl("http://127.0.0.1:" + porta + "/?k=" + chave);
     }
 
     private File pastaDocumentos() {
