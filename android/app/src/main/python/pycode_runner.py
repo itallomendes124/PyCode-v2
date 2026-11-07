@@ -149,10 +149,19 @@ def _imprimir_erro(tipo, erro, tb, arquivo):
     sys.stderr.write("".join(traceback.format_exception(tipo, erro, tb)))
 
 
-def _esperar_threads():
+def _esperar_threads(ignorar=()):
+    """Espera as threads que o PROGRAMA do usuário deixou rodando, como o Python faz ao sair.
+
+    Não contam: a thread principal do Python e as threads que já existiam antes do programa
+    (as do Java/Chaquopy). No Android o executor roda numa thread do Java e a principal fica
+    viva para sempre; esperar por ela travava o "fim" e deixava o botão preso em ■.
+    """
     atual = threading.current_thread()
+    principal = threading.main_thread()
     while True:
-        pendentes = [t for t in threading.enumerate() if t is not atual and not t.daemon and t.is_alive()]
+        pendentes = [t for t in threading.enumerate()
+                     if t is not atual and t is not principal and t not in ignorar
+                     and not t.daemon and t.is_alive()]
         if not pendentes:
             return
         for t in pendentes:
@@ -177,6 +186,7 @@ def _rodar(porta, token, pasta, arquivo, erro_arquivo):
     if pasta not in sys.path:
         sys.path.insert(0, pasta)
     codigo = 0
+    existentes = set(threading.enumerate())  # o que já existia antes do programa do usuário
     ambiente = {"__name__": "__main__", "__file__": caminho, "__builtins__": builtins}
     try:
         exec(compile(fonte, arquivo, "exec"), ambiente)
@@ -194,7 +204,7 @@ def _rodar(porta, token, pasta, arquivo, erro_arquivo):
         _imprimir_erro(tipo, erro, tb, arquivo)
         codigo = 1
     try:
-        _esperar_threads()
+        _esperar_threads(existentes)
     except BaseException:
         pass
     _enviar(principal, {"t": "fim", "codigo": codigo})

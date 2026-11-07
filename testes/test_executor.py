@@ -34,6 +34,19 @@ def _lancador(porta, token, pasta, arquivo, erro):
     PROC_VIVOS.append(p)
 
 
+def _lancador_como_no_android(porta, token, pasta, arquivo, erro):
+    """No Android o executor roda numa thread do Java (RunnerService) e a thread principal
+    do Python continua viva. Aqui: a thread principal dorme e o executor roda numa thread."""
+    codigo = (f"import sys, threading, time; sys.path[:0] = {[str(ANDROID_PY), str(RAIZ)]!r}; "
+              f"import pycode_runner; "
+              f"t = threading.Thread(target=pycode_runner.executar, args=({porta}, {token!r}, {pasta!r}, {arquivo!r}, {erro!r})); "
+              f"t.start(); time.sleep(120)")
+    p = subprocess.Popen([sys.executable, "-c", codigo], cwd=str(pasta),
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         env={**os.environ, "PYTHONPATH": os.pathsep.join([str(ANDROID_PY), str(RAIZ)])})
+    PROC_VIVOS.append(p)
+
+
 class Base(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -154,6 +167,46 @@ class TestSeguranca(Base):
             s.close()
         finally:
             proc.parar()
+
+
+class TestComoNoAndroid(Base):
+    """O defeito do botão preso em ■: o programa terminava, mas o "fim" nunca chegava ao app."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import pycode_remoto
+        pycode_remoto.instalar(_lancador_como_no_android)
+
+    @classmethod
+    def tearDownClass(cls):
+        import pycode_remoto
+        pycode_remoto.instalar(_lancador)
+
+    def test_programa_simples_termina_mesmo_com_a_thread_principal_viva(self):
+        saida, codigo = self.rodar("print('acabou')\n", limite=8)
+        self.assertIn("acabou", saida)
+        self.assertEqual(codigo, 0, "o fim do programa não chegou ao app")
+
+    def test_erro_no_programa_tambem_termina(self):
+        saida, codigo = self.rodar("print('a')\n1/0\n", limite=8)
+        self.assertIn("ZeroDivisionError", saida)
+        self.assertEqual(codigo, 1)
+
+    def test_thread_do_usuario_ainda_e_esperada(self):
+        # o programa deixa uma thread rodando depois do fim do script: o executor tem que esperá-la
+        fonte = ("import threading, time\n"
+                 "def tarefa():\n    time.sleep(1.2)\n    print('thread terminou')\n"
+                 "threading.Thread(target=tarefa).start()\nprint('script terminou')\n")
+        saida, codigo = self.rodar(fonte, limite=10)
+        self.assertIn("thread terminou", saida)
+        self.assertEqual(codigo, 0)
+
+    def test_thread_daemon_do_usuario_nao_segura_o_fim(self):
+        fonte = ("import threading, time\n"
+                 "threading.Thread(target=lambda: time.sleep(60), daemon=True).start()\nprint('fim')\n")
+        saida, codigo = self.rodar(fonte, limite=8)
+        self.assertEqual(codigo, 0)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-PyCode v2 - execucao dos testes em 2026-11-06 (Linux, Python 3.12.3)
+PyCode v2 - execucao dos testes em 2026-11-07 (Linux, Python 3.12.3)
 Comando: python3 -W ignore -m unittest discover -s testes -p "test_*.py" -v
 
 test_cabecalho_fixo_1_nao_vale_mais ... ok
@@ -39,6 +39,10 @@ test_temperatura ... ok
 test_expoente_gigante_nao_trava ... ok
 test_nao_usa_eval_nem_exec ... ok
 test_recusa_codigo_que_nao_e_conta ... ok
+test_erro_no_programa_tambem_termina ... ok
+test_programa_simples_termina_mesmo_com_a_thread_principal_viva ... ok
+test_thread_daemon_do_usuario_nao_segura_o_fim ... ok
+test_thread_do_usuario_ainda_e_esperada ... ok
 test_excecao_mostra_linha ... ok
 test_syntaxerror ... ok
 test_funcoes_e_classes ... ok
@@ -103,5 +107,5 @@ test_novos_widgets_existem_no_ttk ... ok
 test_photoimage_arquivo_inexistente_da_erro_claro ... ok
 test_photoimage_de_arquivo ... ok
 test_photoimage_de_bytes_vira_data_url ... ok
-Ran 102 tests in 55.000s
+Ran 106 tests in 58.114s
 OK

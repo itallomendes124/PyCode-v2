@@ -5,8 +5,8 @@ corrigido e o que **não** foi testado. Onde algo não foi verificado, está esc
 
 ## Resumo
 
-- Foram encontradas **4 falhas de segurança** no servidor local (uma delas só corrigida no APK) e **2 melhorias de robustez**. Todas as corrigidas têm teste.
-- **102 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
+- Foram encontradas **4 falhas de segurança** no servidor local (uma delas só corrigida no APK), **2 melhorias de robustez** e **1 defeito de confiabilidade** (o botão preso em ■, item A7). Todos os corrigidos têm teste.
+- **106 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
 - Os testes de segurança e do botão de executar foram conferidos **estragando o código de propósito**: com o defeito de volta, eles falham.
 - **Não foi testado em aparelho Android real.** Veja "O que não foi testado".
 - Durante o trabalho, o pacote `pycode-widgets.zip` desfez duas correções anteriores (botão de executar e nomes do PyCode v2). Foi corrigido e há teste de regressão. Veja o item R0.
@@ -30,6 +30,7 @@ O Python do app é o CPython oficial. **A única biblioteca padrão substituída
 | A4 | Média | `pycode_servidor.py`, importar `.zip` | Sem limite de entradas, de tamanho nem de compressão. | Um `.zip` com 20.001 entradas foi aceito e 20.000 arquivos foram gravados. | Limites: 500 entradas, 20 MB descompactados, razão de compressão 200:1. | `test_zip_com_muitas_entradas_rejeitado`, `test_zip_bomb_por_razao_rejeitado` |
 | A5 | Baixa | comparação do token | `hmac.compare_digest` com texto fora do ASCII gerava erro `500` em vez de `403`. | Leitura do código e teste. | A comparação passou a usar bytes. | `test_texto_fora_do_ascii_da_403_e_nao_500` |
 | A6 | Baixa | servidor | Quando o navegador fechava a conexão, o servidor despejava um erro enorme no log. | Visto nos logs dos testes. | Só erros de conexão são ignorados. Qualquer outro erro continua aparecendo. | `TestErrosDeConexao` (2 testes) |
+| A7 | Média (confiabilidade) | `android/.../pycode_runner.py`, `_esperar_threads` | O executor esperava **todas** as threads não-daemon antes de avisar o "fim". No Android ele roda numa thread do Java e a **thread principal do Python fica viva para sempre**; ele esperava por ela e nunca avisava. O programa terminava, mas o app ficava em ■ sem "Finalizado". | Visto no tablet (programa de diagnóstico: relatório na tela, ■ preso, sem "Finalizado"). Reproduzido aqui rodando o executor numa thread secundária com a principal viva: os 4 testes novos falharam com o fim `None`. | A espera ignora a thread principal e as que já existiam antes do programa. Threads **do usuário** continuam sendo esperadas, como no Python normal. | `TestComoNoAndroid` (4 testes) |
 
 ## Verificado e sem problema (com teste)
 
@@ -49,6 +50,8 @@ O Python do app é o CPython oficial. **A única biblioteca padrão substituída
 O pacote `pycode-widgets.zip` sobrescreveu `web/index.html` e `README.md` com cópias antigas. Resultado no GitHub:
 - o botão de executar **voltou a não devolver o ▶ na hora** ao tocar no ■;
 - o README **voltou aos nomes antigos** (`# PyCode`, `pycode.git`).
+
+O botão preso tinha **outra causa, mais profunda** (A7), que as correções anteriores (servidor e página) não tocavam. Eu as fiz sem conseguir reproduzir o defeito, e o teste no tablet mostrou que não bastavam. A causa real só apareceu quando o executor passou a ser testado do jeito que o Android o roda (numa thread secundária).
 
 Corrigido neste pacote. O teste `test_botao_volta_na_hora_ao_tocar_em_parar` bloqueia o pedido de parar no navegador, então **só a correção da página** consegue devolver o botão. Conferi estragando a página: o teste falha (`'Parar' != 'Executar'`).
 
@@ -73,12 +76,12 @@ Execução em Linux, Python 3.12, com o executor e o Chromium simulando o caminh
 |---|---|---|
 | `test_api_seguranca.py` | 27 | token, chave de abertura, exportar, `Host`, métodos, erros, erros de conexão |
 | `test_projetos_arquivos.py` | 13 | projetos, arquivos, traversal, limites, `.zip` |
-| `test_executor.py` | 12 | saída, `input()`, erros, parar, órfãos, saída limitada |
+| `test_executor.py` | 16 | saída, `input()`, erros, parar, órfãos, saída limitada, fim do programa como no Android |
 | `test_tkinter.py` | 11 | widgets básicos, variáveis, layout, eventos |
 | `test_tkinter_widgets.py` | 21 | Checkbutton, Radiobutton, Scale, Spinbox, Combobox, Notebook, Menu, PhotoImage |
 | `test_calculadora.py` | 11 | contas, conversor, segurança do avaliador |
 | `test_navegador.py` | 7 | página real: token, botão ▶/■, janela `tkinter`, exportar, widgets |
-| **Total** | **102** | **todos passam** |
+| **Total** | **106** | **todos passam** |
 
 Para rodar: `python3 -m unittest discover -s testes -p "test_*.py"`. Veja `testes/README.md`.
 
@@ -94,6 +97,7 @@ Estraguei o código de propósito e conferi se os testes reclamam:
 | página entregue sem chave de abertura | falha (4 testes) |
 | comparação do token volta a usar texto | falha (1 teste) |
 | `parar()` da página volta à versão antiga | falha (`'Parar' != 'Executar'`) |
+| `_esperar_threads` volta a esperar a thread principal | falha (4 testes, fim `None`) |
 
 Um dos testes do botão passou mesmo com o defeito de volta. Eu o reescrevi até ele falhar. Por isso a conferência existe.
 
