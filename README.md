@@ -102,11 +102,13 @@ No Windows, para criar um atalho na área de trabalho:
 ## Limites
 
 - Projeto pessoal em evolução. Pode ter bugs.
-- O `tkinter` próprio manda comandos de desenho para a página.
-- Não tem `pip` embutido e não substitui o VS Code do computador.
-- **Segurança:** o servidor não tem senha. Outros apps do mesmo aparelho conseguem acessar `127.0.0.1:8765`. Instale só apps em que você confia.
-- O PyCode do Android não tem `pip`, e bibliotecas como NumPy, Pandas e PyTorch não rodam nele (precisam de código nativo compilado para o aparelho). No computador, o PyCode usa o seu Python e o `pip` normal.
+- O `tkinter` do PyCode é próprio e cobre a maior parte do uso comum: `Label`, `Button`, `Entry`, `Text`, `Canvas`, `Frame`, `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Menu`, `PhotoImage` (PNG, GIF, JPEG), `ttk.Combobox`, `ttk.Notebook`, `tkinter.font` e `tkinter.filedialog`.
+- Ainda não existem: `Treeview`, `Progressbar`, `PanedWindow`, `tkinter.colorchooser`, `tkinter.scrolledtext` e `turtle`.
+- O `filedialog` do PyCode abre um seletor próprio, que só mostra as pastas dos projetos e o armazenamento do aparelho. Ele devolve caminhos de verdade, que o `open()` consegue abrir. O seletor nativo do Android não serviria, porque devolve um endereço `content://`.
+- A lista de `font.families()` é fixa: tem os nomes que a página reconhece, e o resultado visual depende das fontes do aparelho.
+- No Android não há `pip` nem Python filho. Bibliotecas nativas (NumPy, Pandas, Matplotlib, Pillow) só entram na compilação do APK, na variante com bibliotecas. SciPy, scikit-learn, PyTorch e TensorFlow não existem para o Python 3.13 do Chaquopy.
 - O PyCode não substitui o VS Code do computador.
+- Segurança: veja a seção abaixo.
 
 ## Segurança
 O PyCode abre um servidor só no seu aparelho (`127.0.0.1`). O que protege os seus projetos:

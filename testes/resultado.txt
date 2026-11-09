@@ -1,4 +1,4 @@
-PyCode v2 - execucao dos testes em 2026-11-06 (Linux, Python 3.12.3)
+PyCode v2 - execucao dos testes em 2026-11-07 (Linux, Python 3.12.3)
 Comando: python3 -W ignore -m unittest discover -s testes -p "test_*.py" -v
 
 test_cabecalho_fixo_1_nao_vale_mais ... ok
@@ -28,8 +28,10 @@ test_erro_nao_vaza_caminho_interno ... ok
 test_json_malformado_400 ... ok
 test_nenhuma_resposta_libera_outros_sites_via_cors ... ok
 test_rota_desconhecida_404 ... ok
+test_exemplos_que_abrem_janela_ligam_a_ponte ... ok
 test_o_exemplo_compila_e_liga_a_ponte_de_janelas ... ok
 test_o_exemplo_usa_matplotlib_sem_janela ... ok
+test_todos_os_exemplos_compilam ... ok
 test_versoes_esperadas_no_exemplo_batem_com_o_build ... ok
 test_a_opcao_so_liga_com_o_parametro ... ok
 test_chaves_e_parenteses_balanceados ... ok
@@ -37,7 +39,7 @@ test_continua_so_arm64_e_python_313 ... ok
 test_o_identificador_base_nao_mudou ... ok
 test_o_nome_do_app_normal_continua_o_mesmo ... ok
 test_pip_e_identificador_so_existem_dentro_da_opcao ... ok
-test_versoes_fixas_das_quatro_bibliotecas ... ok
+test_versoes_fixas_das_bibliotecas ... ok
 test_grupos_de_concorrencia_diferentes ... ok
 test_nome_do_arquivo_do_apk_das_bibliotecas ... ok
 test_o_fluxo_das_bibliotecas_compila_com_a_opcao ... ok
@@ -56,6 +58,14 @@ test_temperatura ... ok
 test_expoente_gigante_nao_trava ... ok
 test_nao_usa_eval_nem_exec ... ok
 test_recusa_codigo_que_nao_e_conta ... ok
+test_as_notas_listam_font_e_filedialog ... ok
+test_o_nome_do_apk_nas_notas_e_o_novo ... ok
+test_a_secao_limites_fala_do_pip_e_das_bibliotecas_nativas ... ok
+test_nao_ficou_o_texto_antigo_sobre_senha ... ok
+test_nenhum_item_de_lista_repetido ... ok
+test_o_que_o_texto_diz_que_existe_existe ... ok
+test_o_que_o_texto_diz_que_nao_existe_realmente_nao_existe ... ok
+test_o_readme_cita_a_secao_de_seguranca_e_a_de_testes ... ok
 test_erro_no_programa_tambem_termina ... ok
 test_programa_simples_termina_mesmo_com_a_thread_principal_viva ... ok
 test_thread_daemon_do_usuario_nao_segura_o_fim ... ok
@@ -76,12 +86,30 @@ test_botao_volta_a_executar_quando_o_programa_termina ... ok
 test_botao_volta_na_hora_ao_tocar_em_parar ... ok
 test_exportar_pelo_botao_da_pagina_funciona_com_token ... ok
 test_fechar_janela_tkinter_devolve_o_botao ... ok
+test_fonte_e_aplicada_medida_e_acompanha_mudancas ... ok
 test_manifest_e_sw_servidos ... ok
 test_pagina_carrega_e_opera_com_token ... ok
+test_parar_o_programa_fecha_o_seletor ... ok
+test_peca_que_expande_cede_espaco_e_o_rodape_continua_visivel ... ok
+test_peca_sem_expand_nao_encolhe ... ok
+test_seletor_abrir_devolve_o_caminho_escolhido ... ok
+test_seletor_cancelar_devolve_vazio ... ok
+test_seletor_escolher_pasta ... ok
+test_seletor_nao_sai_das_pastas_permitidas ... ok
+test_seletor_salvar_acrescenta_a_extensao_e_recusa_nome_com_barra ... ok
 test_widgets_novos_aparecem_e_respondem ... ok
 test_arquivo_grande_rejeitado ... ok
 test_extensao_invalida_rejeitada ... ok
 test_salvar_e_ler ... ok
+test_exige_o_token ... ok
+test_limite_de_itens ... ok
+test_lista_pastas_primeiro_e_esconde_ocultos ... ok
+test_nao_devolve_conteudo_de_arquivo ... ok
+test_pasta_inexistente_ou_arquivo_da_404 ... ok
+test_recusa_atalho_que_aponta_para_fora ... ok
+test_recusa_pastas_fora_das_permitidas ... ok
+test_recusa_subir_com_ponto_ponto ... ok
+test_sem_caminho_lista_a_raiz_dos_projetos ... ok
 test_criar_listar_excluir ... ok
 test_projeto_inexistente_404 ... ok
 test_renomear ... ok
@@ -103,6 +131,34 @@ test_listbox_insert_get_delete_selection ... ok
 test_messagebox_e_simpledialog_existem ... ok
 test_stringvar_liga_no_label ... ok
 test_toplevel_varias_janelas ... ok
+test_abrir_devolve_o_caminho_ou_vazio ... ok
+test_abrir_varios_devolve_tupla ... ok
+test_askopenfile_e_asksaveasfile_devolvem_arquivos_de_verdade ... ok
+test_escolher_pasta ... ok
+test_falha_na_ponte_nao_derruba_o_programa ... ok
+test_modos_e_opcoes_de_salvar ... ok
+test_o_modulo_existe ... ok
+test_o_pedido_enviado_a_pagina ... ok
+test_pasta_inicial_padrao_e_a_pasta_do_programa ... ok
+test_resposta_estranha_vira_cancelamento ... ok
+test_salvar_acrescenta_a_extensao_padrao_so_quando_falta ... ok
+test_cget_getitem_setitem_e_configure ... ok
+test_copy_e_independente_e_tem_outro_nome ... ok
+test_descricoes_aceitas ... ok
+test_families_devolve_nomes_ordenados ... ok
+test_fontes_nomeadas ... ok
+test_measure_pergunta_a_pagina ... ok
+test_metrics ... ok
+test_nome_proprio_e_localizavel ... ok
+test_o_modulo_existe_nos_dois_jeitos_de_importar ... ok
+test_opcoes_invalidas_dao_erro_claro ... ok
+test_opcoes_viram_o_que_a_pagina_recebe ... ok
+test_padrao ... ok
+test_tamanho_negativo_e_em_pixels_e_segue_para_a_pagina ... ok
+test_tuplas_antigas_continuam_funcionando ... ok
+test_widget_recebe_a_fonte_e_acompanha_mudancas ... ok
+test_medir_texto_e_metricas_esperam_a_resposta ... ok
+test_o_seletor_espera_a_resposta_da_pagina ... ok
 test_checkbutton_clique_chama_command_e_atualiza_variavel ... ok
 test_checkbutton_onvalue_offvalue ... ok
 test_checkbutton_select_deselect_toggle ... ok
@@ -124,5 +180,5 @@ test_novos_widgets_existem_no_ttk ... ok
 test_photoimage_arquivo_inexistente_da_erro_claro ... ok
 test_photoimage_de_arquivo ... ok
 test_photoimage_de_bytes_vira_data_url ... ok
-Ran 123 tests in 58.325s
+Ran 179 tests in 105.589s
 OK

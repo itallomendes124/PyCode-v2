@@ -32,7 +32,7 @@ class _Ponte:
     def __getattr__(self, nome):
         if nome.startswith("_"):
             raise AttributeError(nome)
-        if nome in ("medida", "confirmar", "perguntarTexto"):
+        if nome in ("medida", "confirmar", "perguntarTexto", "escolherArquivo", "medirTexto", "metricasFonte"):
             return lambda *args: self._pedir(nome, args)
         return lambda *args: self._enviar({"m": nome, "a": list(args)})
 
@@ -162,6 +162,8 @@ def _par(valor):
 
 
 def _serializar(valor):
+    if isinstance(valor, Font):
+        return list(valor._tupla())
     if isinstance(valor, (list, tuple)):
         return [_serializar(v) for v in valor]
     if isinstance(valor, (str, int, float, bool)) or valor is None:
@@ -476,6 +478,10 @@ class Misc:
                 envio["text"] = str(valor)
             elif chave == "image":
                 envio["image"] = str(valor) if valor is not None else ""
+            elif chave == "font":
+                if isinstance(valor, Font):
+                    valor._registrar_uso(self)
+                envio["font"] = _serializar(valor)
             elif chave == "from_":
                 envio["from"] = _serializar(valor)
             else:
@@ -1469,7 +1475,301 @@ ttk.Combobox = Combobox
 ttk.Notebook = Notebook
 ttk.Style = _Estilo
 
-for _nome, _modulo in (("messagebox", messagebox), ("simpledialog", simpledialog), ("ttk", ttk)):
+class Font:
+    """Fonte do tkinter. As fontes são aplicadas pela página, e `measure` pergunta a ela."""
+
+    _nomeadas = {}
+    _contador = 0
+
+    def __init__(self, root=None, font=None, name=None, exists=False, **opcoes):
+        invalidas = [chave for chave in opcoes if chave not in _OPCOES_FONTE]
+        if invalidas:
+            raise TclError(f'unknown option "-{invalidas[0]}"')
+        if exists:
+            existente = Font._obter(name)
+            self.name = existente.name
+            self._dados = existente._dados
+            self._usos = existente._usos
+            if opcoes:
+                self.configure(**opcoes)
+            return
+        dados = dict(_PADRAO_FONTE)
+        if font is not None:
+            dados.update(_descrever_fonte(font))
+        dados.update(_limpar_opcoes_fonte(opcoes))
+        if name is None:
+            Font._contador += 1
+            name = f"font{Font._contador}"
+        self.name = name
+        self._dados = dados
+        self._usos = []
+        Font._nomeadas[name] = self
+
+    @staticmethod
+    def _obter(nome):
+        if nome in Font._nomeadas:
+            return Font._nomeadas[nome]
+        if nome in _FONTES_NOMEADAS:
+            base = dict(_PADRAO_FONTE)
+            base.update(_FONTES_NOMEADAS[nome])
+            fonte = Font.__new__(Font)
+            fonte.name, fonte._dados, fonte._usos = nome, base, []
+            Font._nomeadas[nome] = fonte
+            return fonte
+        raise TclError(f'named font {nome} doesn\'t exist')
+
+    def _tupla(self):
+        d = self._dados
+        estilos = []
+        if d["weight"] == "bold":
+            estilos.append("bold")
+        if d["slant"] == "italic":
+            estilos.append("italic")
+        if d["underline"]:
+            estilos.append("underline")
+        if d["overstrike"]:
+            estilos.append("overstrike")
+        return (d["family"], d["size"], " ".join(estilos) or "normal")
+
+    def _registrar_uso(self, widget):
+        if all(u is not widget for u in self._usos):
+            self._usos.append(widget)
+
+    def actual(self, option=None, displayof=None):
+        if option is None:
+            return dict(self._dados)
+        return self.cget(option)
+
+    def cget(self, option):
+        chave = str(option).lstrip("-")
+        if chave not in self._dados:
+            raise TclError(f'unknown option "-{chave}"')
+        return self._dados[chave]
+
+    __getitem__ = cget
+
+    def configure(self, **opcoes):
+        if not opcoes:
+            return dict(self._dados)
+        invalidas = [chave for chave in opcoes if chave not in _OPCOES_FONTE]
+        if invalidas:
+            raise TclError(f'unknown option "-{invalidas[0]}"')
+        self._dados.update(_limpar_opcoes_fonte(opcoes))
+        for widget in list(self._usos):
+            try:
+                widget.configure(font=self)
+            except Exception:
+                pass
+        return None
+
+    config = configure
+
+    def __setitem__(self, chave, valor):
+        self.configure(**{str(chave).lstrip("-"): valor})
+
+    def copy(self):
+        return Font(font=self)
+
+    def measure(self, text, displayof=None):
+        return int(TK.medirTexto(list(self._tupla()), str(text)) or 0)
+
+    def metrics(self, *opcoes, **kw):
+        medidas = TK.metricasFonte(list(self._tupla())) or {}
+        padrao = {"ascent": 0, "descent": 0, "linespace": 0, "fixed": 0}
+        padrao.update(medidas)
+        if opcoes:
+            chave = str(opcoes[0]).lstrip("-")
+            if chave not in padrao:
+                raise TclError(f'bad metric "-{chave}"')
+            return padrao[chave]
+        return padrao
+
+    def __eq__(self, outro):
+        return self.name == (outro.name if isinstance(outro, Font) else outro)
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"<tkinter.font.Font object {self.name!r}>"
+
+
+_PADRAO_FONTE = {"family": "Helvetica", "size": 10, "weight": "normal", "slant": "roman",
+                 "underline": 0, "overstrike": 0}
+_OPCOES_FONTE = ("family", "size", "weight", "slant", "underline", "overstrike")
+_FONTES_NOMEADAS = {
+    "TkDefaultFont": {"family": "TkDefaultFont"},
+    "TkTextFont": {"family": "TkDefaultFont"},
+    "TkFixedFont": {"family": "TkFixedFont"},
+    "TkMenuFont": {"family": "TkDefaultFont"},
+    "TkHeadingFont": {"family": "TkDefaultFont"},
+    "TkCaptionFont": {"family": "TkDefaultFont", "weight": "bold"},
+    "TkSmallCaptionFont": {"family": "TkDefaultFont", "size": 9},
+    "TkIconFont": {"family": "TkDefaultFont"},
+    "TkTooltipFont": {"family": "TkDefaultFont", "size": 9},
+}
+# O PyCode não enxerga as fontes do aparelho: esta lista tem os nomes que a página reconhece.
+_FAMILIAS = ("Arial", "Consolas", "Courier", "Courier New", "Helvetica", "Times", "Times New Roman",
+             "TkDefaultFont", "TkFixedFont", "Verdana")
+
+
+def _limpar_opcoes_fonte(opcoes):
+    limpo = {}
+    for chave, valor in opcoes.items():
+        if chave == "family":
+            limpo[chave] = str(valor)
+        elif chave == "size":
+            try:
+                limpo[chave] = int(float(valor))
+            except (TypeError, ValueError):
+                raise TclError(f'expected integer but got "{valor}"')
+        elif chave == "weight":
+            if str(valor) not in ("normal", "bold"):
+                raise TclError(f'bad -weight value "{valor}": must be normal or bold')
+            limpo[chave] = str(valor)
+        elif chave == "slant":
+            if str(valor) not in ("roman", "italic"):
+                raise TclError(f'bad -slant value "{valor}": must be roman or italic')
+            limpo[chave] = str(valor)
+        else:
+            limpo[chave] = 1 if valor else 0
+    return limpo
+
+
+def _descrever_fonte(fonte):
+    """Aceita ('Arial', 12, 'bold'), 'Arial 12 bold', '{Times New Roman} 14', um nome ou uma Font."""
+    if isinstance(fonte, Font):
+        return dict(fonte._dados)
+    if isinstance(fonte, str):
+        if fonte in Font._nomeadas or fonte in _FONTES_NOMEADAS:
+            return dict(Font._obter(fonte)._dados)
+        import re
+        texto = fonte.strip()
+        casa = re.match(r"^\{([^}]*)\}\s*(.*)$", texto)
+        partes = [casa.group(1)] + casa.group(2).split() if casa else texto.split()
+    else:
+        partes = [str(p) for p in fonte]
+    dados = {}
+    if partes:
+        dados["family"] = partes[0]
+    if len(partes) > 1:
+        dados["size"] = _limpar_opcoes_fonte({"size": partes[1]})["size"]
+    for estilo in " ".join(partes[2:]).lower().split():
+        if estilo == "bold":
+            dados["weight"] = "bold"
+        elif estilo == "italic":
+            dados["slant"] = "italic"
+        elif estilo in ("underline", "overstrike"):
+            dados[estilo] = 1
+    return dados
+
+
+def _fontes_families(root=None, displayof=None):
+    return tuple(sorted(_FAMILIAS))
+
+
+def _fontes_names(root=None):
+    return tuple(sorted(set(Font._nomeadas) | set(_FONTES_NOMEADAS)))
+
+
+def _fontes_nametofont(name, root=None):
+    return Font._obter(name)
+
+
+font = _Modulo("tkinter.font")
+font.Font = Font
+font.NORMAL, font.ROMAN, font.BOLD, font.ITALIC = "normal", "roman", "bold", "italic"
+font.families = _fontes_families
+font.names = _fontes_names
+font.nametofont = _fontes_nametofont
+
+
+# ------------------------------------------------------------------ tkinter.filedialog
+def _padroes_de_tipos(tipos):
+    """filetypes=[('Texto', '*.txt'), ('Imagens', ('*.png', '*.jpg'))] vira listas simples."""
+    resultado = []
+    for item in tipos or ():
+        try:
+            descricao, padroes = item[0], item[1]
+        except (TypeError, IndexError):
+            continue
+        if isinstance(padroes, str):
+            padroes = padroes.split()
+        resultado.append([str(descricao), [str(p) for p in padroes]])
+    return resultado
+
+
+def _escolher_caminhos(modo, opcoes, titulo_padrao):
+    import os
+    pedido = {"modo": modo,
+              "pasta": str(opcoes.get("initialdir") or os.getcwd()),
+              "titulo": str(opcoes.get("title") or titulo_padrao),
+              "tipos": _padroes_de_tipos(opcoes.get("filetypes")),
+              "nome": str(opcoes.get("initialfile") or ""),
+              "extensao": str(opcoes.get("defaultextension") or ""),
+              "sobrescrever": bool(opcoes.get("confirmoverwrite", True))}
+    try:
+        resposta = TK.escolherArquivo(pedido)
+    except Exception:
+        resposta = None
+    caminhos = resposta.get("caminhos") if isinstance(resposta, dict) else None
+    return [str(c) for c in caminhos or []]
+
+
+def _com_extensao(caminho, opcoes):
+    import os
+    extensao = str(opcoes.get("defaultextension") or "")
+    if extensao and not os.path.splitext(caminho)[1]:
+        return caminho + extensao
+    return caminho
+
+
+def _fd_askopenfilename(**opcoes):
+    caminhos = _escolher_caminhos("abrir", opcoes, "Abrir")
+    return caminhos[0] if caminhos else ""
+
+
+def _fd_askopenfilenames(**opcoes):
+    return tuple(_escolher_caminhos("abrir_varios", opcoes, "Abrir"))
+
+
+def _fd_asksaveasfilename(**opcoes):
+    caminhos = _escolher_caminhos("salvar", opcoes, "Salvar como")
+    return _com_extensao(caminhos[0], opcoes) if caminhos else ""
+
+
+def _fd_askdirectory(**opcoes):
+    caminhos = _escolher_caminhos("pasta", opcoes, "Escolher pasta")
+    return caminhos[0] if caminhos else ""
+
+
+def _fd_askopenfile(mode="r", **opcoes):
+    caminho = _fd_askopenfilename(**opcoes)
+    return open(caminho, mode) if caminho else None
+
+
+def _fd_askopenfiles(mode="r", **opcoes):
+    return tuple(open(c, mode) for c in _fd_askopenfilenames(**opcoes))
+
+
+def _fd_asksaveasfile(mode="w", **opcoes):
+    caminho = _fd_asksaveasfilename(**opcoes)
+    return open(caminho, mode) if caminho else None
+
+
+filedialog = _Modulo("tkinter.filedialog")
+filedialog.askopenfilename = _fd_askopenfilename
+filedialog.askopenfilenames = _fd_askopenfilenames
+filedialog.asksaveasfilename = _fd_asksaveasfilename
+filedialog.askdirectory = _fd_askdirectory
+filedialog.askopenfile = _fd_askopenfile
+filedialog.askopenfiles = _fd_askopenfiles
+filedialog.asksaveasfile = _fd_asksaveasfile
+
+for _nome, _modulo in (("messagebox", messagebox), ("simpledialog", simpledialog), ("ttk", ttk), ("font", font), ("filedialog", filedialog)):
     sys.modules["tkinter." + _nome] = _modulo
 
 __all__ = [

@@ -6,7 +6,7 @@ corrigido e o que **não** foi testado. Onde algo não foi verificado, está esc
 ## Resumo
 
 - Foram encontradas **4 falhas de segurança** no servidor local (uma delas só corrigida no APK), **2 melhorias de robustez** e **1 defeito de confiabilidade** (o botão preso em ■, item A7). Todos os corrigidos têm teste.
-- **123 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
+- **179 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
 - Os testes de segurança e do botão de executar foram conferidos **estragando o código de propósito**: com o defeito de volta, eles falham.
 - **Não foi testado em aparelho Android real.** Veja "O que não foi testado".
 - Durante o trabalho, o pacote `pycode-widgets.zip` desfez duas correções anteriores (botão de executar e nomes do PyCode v2). Foi corrigido e há teste de regressão. Veja o item R0.
@@ -45,11 +45,23 @@ O Python do app é o CPython oficial. **A única biblioteca padrão substituída
 - **Android (leitura do código):** `allowBackup="false"`; o serviço do executor tem `exported="false"`; o WebView não acessa `file://` nem conteúdo; links externos abrem fora do app; a única função exposta ao JavaScript é `escolherPasta` (abre o seletor de pasta).
 - **Calculadora de exemplo:** o avaliador usa `ast`, não `eval`, e recusa `__import__`, `open`, `lambda`, atributos e expoentes gigantes.
 
+## Rota acrescentada na Fase C: `/api/pasta`
+
+O `tkinter.filedialog` do PyCode abre um seletor próprio, e ele precisa listar pastas. A rota foi desenhada para listar o mínimo:
+
+- **Exige o token**, como as demais rotas.
+- **Só lista dentro de duas raízes:** a pasta dos projetos e, no Android, `/storage/emulated/0`. O caminho é resolvido (`..` e links simbólicos) antes de comparar, então `../../` e atalhos que apontam para fora recebem `403`.
+- **Devolve só nomes, tipo e tamanho.** Nunca o conteúdo de um arquivo. Arquivos que começam com ponto não aparecem, e a lista para em 2.000 itens.
+- Os 9 testes de `TestListarPasta` cobrem token, `..`, link simbólico, pasta inexistente, limite e que nada de conteúdo vaza. Tirei a checagem de pasta permitida de propósito, e 3 testes falharam.
+- **Risco residual:** o app passa a poder mostrar *os nomes* dos arquivos do armazenamento compartilhado a quem tem o token. Quem já tem o token e roda código no app já podia ler esses arquivos pelo `open()`, então não é um poder novo, mas é uma superfície nova.
+
 ## Regressões que eu causei (R0)
 
 O pacote `pycode-widgets.zip` sobrescreveu `web/index.html` e `README.md` com cópias antigas. Resultado no GitHub:
 - o botão de executar **voltou a não devolver o ▶ na hora** ao tocar no ■;
 - o README **voltou aos nomes antigos** (`# PyCode`, `pycode.git`).
+
+Na Fase C achei outro erro meu, no README: a seção "Limites" tinha perdido a linha com a cobertura do `tkinter`, ganhado uma frase repetida e mantido uma linha antiga e falsa ("o servidor não tem senha"). Foi reescrita, e `test_documentos.py` agora confere o README contra o código.
 
 O botão preso tinha **outra causa, mais profunda** (A7), que as correções anteriores (servidor e página) não tocavam. Eu as fiz sem conseguir reproduzir o defeito, e o teste no tablet mostrou que não bastavam. A causa real só apareceu quando o executor passou a ser testado do jeito que o Android o roda (numa thread secundária).
 
@@ -75,14 +87,16 @@ Execução em Linux, Python 3.12, com o executor e o Chromium simulando o caminh
 | Arquivo | Testes | Cobre |
 |---|---|---|
 | `test_api_seguranca.py` | 27 | token, chave de abertura, exportar, `Host`, métodos, erros, erros de conexão |
-| `test_projetos_arquivos.py` | 13 | projetos, arquivos, traversal, limites, `.zip` |
+| `test_projetos_arquivos.py` | 22 | projetos, arquivos, traversal, limites, `.zip`, e a rota `/api/pasta` do seletor de arquivos |
 | `test_executor.py` | 16 | saída, `input()`, erros, parar, órfãos, saída limitada, fim do programa como no Android |
 | `test_tkinter.py` | 11 | widgets básicos, variáveis, layout, eventos |
+| `test_tkinter_fontes_arquivos.py` | 28 | `tkinter.font` e `tkinter.filedialog`, inclusive pela ponte real do executor |
 | `test_tkinter_widgets.py` | 21 | Checkbutton, Radiobutton, Scale, Spinbox, Combobox, Notebook, Menu, PhotoImage |
 | `test_calculadora.py` | 11 | contas, conversor, segurança do avaliador |
-| `test_build.py` | 17 | o build normal não muda: `pip` e identificador novo só existem na variante com bibliotecas |
-| `test_navegador.py` | 7 | página real: token, botão ▶/■, janela `tkinter`, exportar, widgets |
-| **Total** | **123** | **todos passam** |
+| `test_build.py` | 19 | o build normal não muda: `pip` e identificador novo só existem na variante com bibliotecas |
+| `test_documentos.py` | 8 | o README e as notas não prometem nem negam o que o código não faz |
+| `test_navegador.py` | 16 | página real: token, botão ▶/■, janela `tkinter`, exportar, widgets, seletor de arquivos, fontes, empacotamento |
+| **Total** | **179** | **todos passam** |
 
 Para rodar: `python3 -m unittest discover -s testes -p "test_*.py"`. Veja `testes/README.md`.
 
@@ -99,6 +113,12 @@ Estraguei o código de propósito e conferi se os testes reclamam:
 | comparação do token volta a usar texto | falha (1 teste) |
 | `parar()` da página volta à versão antiga | falha (`'Parar' != 'Executar'`) |
 | `_esperar_threads` volta a esperar a thread principal | falha (4 testes, fim `None`) |
+| a rota `/api/pasta` deixa de checar a pasta permitida | falha (3 testes) |
+| a ponte deixa de esperar a resposta do seletor de arquivos | falha (teste da ponte real) |
+| `Font` deixa de ser entendida pela serialização | falha |
+| a página responde ao Python sem esperar a Promise | falha (o seletor fecha sozinho) |
+| o README volta a ter linha repetida e o texto antigo sobre senha | falha (2 testes) |
+| peças com `expand` voltam a não encolher | falha (rodapé sai da janela) |
 
 Um dos testes do botão passou mesmo com o defeito de volta. Eu o reescrevi até ele falhar. Por isso a conferência existe.
 

@@ -55,6 +55,9 @@ chaquopy {
                 install("pandas==2.1.3")
                 install("matplotlib==3.8.4")
                 install("pillow==11.0.0")
+                // O Matplotlib 3.8.4 usa nomes que o pyparsing mais novo marca como obsoletos,
+                // o que enche o terminal de avisos. Esta versão não avisa.
+                install("pyparsing==3.1.4")
             }
         }
     }

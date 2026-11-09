@@ -18,7 +18,7 @@ A chave de assinatura é a **chave de teste do Android, pública** (está no rep
 - Funciona: editor, abas, projetos, erros enquanto digita, importar e exportar `.zip`, sem internet.
 - **Pasta dos projetos à sua escolha:** Configurações → *Pasta dos projetos* → *Mudar…*. Os projetos ficam em `<pasta escolhida>/projetos`. Você pode copiar os atuais para lá; nada é apagado da pasta antiga. Exige "Acesso a todos os arquivos".
 - **Executar (▶):** roda o arquivo aberto como um programa separado, com `print`, `input()` (pela caixa embaixo do terminal), erros com a linha certa e o botão ■ que realmente encerra o programa.
-- **`tkinter`:** as janelas aparecem dentro do PyCode. Funcionam `Label`, `Button`, `Entry`, `Text`, `Canvas`, `Frame`, `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Menu`, `PhotoImage`, `ttk.Combobox`, `ttk.Notebook`, `grid`, `pack`, `place`, `bind` e `after`.
+- **`tkinter`:** as janelas aparecem dentro do PyCode. Funcionam `Label`, `Button`, `Entry`, `Text`, `Canvas`, `Frame`, `Listbox`, `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Menu`, `PhotoImage`, `ttk.Combobox`, `ttk.Notebook`, `tkinter.font`, `tkinter.filedialog` (seletor próprio), `grid`, `pack`, `place`, `bind` e `after`.
 - **Limites:** sem `pip`. Se você sair do app, o Android pode encerrar o programa depois de alguns minutos.
 
 Requer Android 7.0 ou mais novo, arquitetura arm64.

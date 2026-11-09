@@ -17,7 +17,8 @@ FLUXO_BIB = (RAIZ / ".github" / "workflows" / "apk-bibliotecas.yml").read_text(e
 EXEMPLO = (RAIZ / "exemplos" / "teste_bibliotecas.py").read_text(encoding="utf-8")
 
 VERSOES = {"numpy": "numpy==1.26.2", "pandas": "pandas==2.1.3",
-           "matplotlib": "matplotlib==3.8.4", "pillow": "pillow==11.0.0"}
+           "matplotlib": "matplotlib==3.8.4", "pillow": "pillow==11.0.0",
+           "pyparsing": "pyparsing==3.1.4"}
 
 
 def sem_blocos_condicionais(texto):
@@ -54,7 +55,7 @@ class TestGradle(unittest.TestCase):
         for proibido in ("install(", "pip {", "applicationIdSuffix", "versionNameSuffix"):
             self.assertNotIn(proibido, fora, f"{proibido} vazou para o APK normal")
 
-    def test_versoes_fixas_das_quatro_bibliotecas(self):
+    def test_versoes_fixas_das_bibliotecas(self):
         instaladas = re.findall(r'install\("([^"]+)"\)', GRADLE)
         self.assertEqual(sorted(instaladas), sorted(VERSOES.values()))
 
@@ -119,6 +120,18 @@ class TestExemplo(unittest.TestCase):
         self.assertEqual(esperadas, no_build)
         for nome, versao in VERSOES.items():
             self.assertIn(versao, GRADLE)
+
+    def test_todos_os_exemplos_compilam(self):
+        exemplos = sorted((RAIZ / "exemplos").glob("*.py"))
+        self.assertGreaterEqual(len(exemplos), 3)
+        for exemplo in exemplos:
+            ast.parse(exemplo.read_text(encoding="utf-8"), filename=exemplo.name)
+
+    def test_exemplos_que_abrem_janela_ligam_a_ponte(self):
+        # a ponte de janelas só liga com uma linha "import tkinter" escrita no programa
+        for nome in ("bloco_de_notas.py", "calculadora.py", "teste_bibliotecas.py"):
+            texto = (RAIZ / "exemplos" / nome).read_text(encoding="utf-8")
+            self.assertRegex(texto, r"(?m)^(import tkinter|from tkinter import)", nome)
 
     def test_o_exemplo_usa_matplotlib_sem_janela(self):
         self.assertIn('matplotlib.use("Agg")', EXEMPLO)

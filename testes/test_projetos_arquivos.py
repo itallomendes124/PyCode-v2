@@ -2,6 +2,7 @@
 import io
 import tempfile
 import unittest
+import urllib.parse
 import zipfile
 from pathlib import Path
 
@@ -114,6 +115,79 @@ class TestZip(Base):
         nomes = [p.name for p in destino.iterdir()]
         self.assertIn("fora.py", nomes)  # achatado para o nome-base
         self.assertFalse((Path(self._tmp.name) / "dados" / "fora.py").exists())
+
+
+class TestListarPasta(Base):
+    """Rota usada pelo seletor de arquivos (tkinter.filedialog). Só lista nomes, só em pastas permitidas."""
+
+    def _listar(self, caminho=None, **kw):
+        alvo = "/api/pasta" + ("?caminho=" + urllib.parse.quote(str(caminho)) if caminho is not None else "")
+        return self.c.jget(alvo, **kw)
+
+    def setUp(self):
+        super().setUp()
+        (self.raiz / "meu" / "dados").mkdir()
+        (self.raiz / "meu" / "dados" / "x.csv").write_text("a,b\n", encoding="utf-8")
+        (self.raiz / "meu" / ".oculto").write_text("segredo", encoding="utf-8")
+        (self.raiz / "meu" / "zeta.txt").write_text("z", encoding="utf-8")
+
+    def test_sem_caminho_lista_a_raiz_dos_projetos(self):
+        st, d = self._listar()
+        self.assertEqual(st, 200)
+        self.assertEqual(Path(d["caminho"]), self.raiz.resolve())
+        self.assertIsNone(d["pai"])
+        self.assertIn("meu", [i["nome"] for i in d["itens"]])
+
+    def test_lista_pastas_primeiro_e_esconde_ocultos(self):
+        st, d = self._listar(self.raiz / "meu")
+        self.assertEqual(st, 200)
+        nomes = [i["nome"] for i in d["itens"]]
+        self.assertEqual(nomes, ["dados", "main.py", "zeta.txt"])
+        self.assertNotIn(".oculto", nomes)
+        self.assertTrue(d["itens"][0]["pasta"])
+        self.assertEqual(Path(d["pai"]), self.raiz.resolve())
+
+    def test_exige_o_token(self):
+        st, _ = self._listar(self.raiz, token=None)
+        self.assertEqual(st, 403)
+        st, _ = self._listar(self.raiz, token="errado")
+        self.assertEqual(st, 403)
+
+    def test_recusa_pastas_fora_das_permitidas(self):
+        for fora in ("/", "/etc", "/tmp", str(self.raiz.parent), str(self.raiz / ".." / "..")):
+            st, d = self._listar(fora)
+            self.assertEqual(st, 403, fora)
+
+    def test_recusa_subir_com_ponto_ponto(self):
+        st, _ = self._listar(str(self.raiz / "meu" / ".." / ".." / ".."))
+        self.assertEqual(st, 403)
+
+    def test_recusa_atalho_que_aponta_para_fora(self):
+        fora = Path(self._tmp.name) / "fora"
+        fora.mkdir()
+        (fora / "segredo.txt").write_text("x", encoding="utf-8")
+        try:
+            (self.raiz / "meu" / "atalho").symlink_to(fora, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("o sistema não permite links simbólicos")
+        st, _ = self._listar(self.raiz / "meu" / "atalho")
+        self.assertEqual(st, 403)
+
+    def test_pasta_inexistente_ou_arquivo_da_404(self):
+        self.assertEqual(self._listar(self.raiz / "nao_existe")[0], 404)
+        self.assertEqual(self._listar(self.raiz / "meu" / "zeta.txt")[0], 404)
+
+    def test_limite_de_itens(self):
+        self.S.LIMITE_LISTAGEM = 3
+        for i in range(10):
+            (self.raiz / "meu" / f"a{i}.txt").write_text("x", encoding="utf-8")
+        st, d = self._listar(self.raiz / "meu")
+        self.assertEqual((st, len(d["itens"])), (200, 3))
+
+    def test_nao_devolve_conteudo_de_arquivo(self):
+        st, d = self._listar(self.raiz / "meu")
+        self.assertNotIn("segredo", str(d))
+        self.assertEqual(set(d["itens"][0]), {"nome", "pasta", "tamanho"})
 
 
 if __name__ == "__main__":

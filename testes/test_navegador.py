@@ -183,5 +183,186 @@ class TestInterface(unittest.TestCase):
             nav.close()
 
 
+    # ---------- tkinter.filedialog e tkinter.font ----------
+    def _preparar_arquivos(self):
+        projeto = self.S.Config.projetos() / "meu"
+        (projeto / "dados.txt").write_text("a,b\n", encoding="utf-8")
+        (projeto / "notas.py").write_text("print(1)\n", encoding="utf-8")
+        (projeto / "dados").mkdir(exist_ok=True)
+        (projeto / "dados" / "x.csv").write_text("1,2\n", encoding="utf-8")
+        return projeto
+
+    def _rodar_programa(self, pg, nome, fonte):
+        self._salvar(pg, nome, fonte)
+        pg.click("#btn-rodar")
+
+    def _linha(self, pg, prefixo):
+        pg.wait_for_function("(p) => document.getElementById('terminal').innerText.includes(p)", arg=prefixo, timeout=12000)
+        return [l for l in pg.inner_text("#terminal").splitlines() if l.startswith(prefixo)][-1]
+
+    def test_seletor_abrir_devolve_o_caminho_escolhido(self):
+        projeto = self._preparar_arquivos()
+        programa = ("import tkinter as tk\nfrom tkinter import filedialog\n"
+                    "c = filedialog.askopenfilename(filetypes=[('Texto', '*.txt'), ('Python', '*.py')])\n"
+                    "print('ESCOLHEU:', c)\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "abrir.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            pg.wait_for_selector(".tk-seletor-item", timeout=12000)
+            nomes = pg.locator(".tk-seletor-item .nome").all_inner_texts()
+            self.assertIn("dados.txt", nomes)
+            self.assertNotIn("notas.py", nomes)  # o filtro inicial é *.txt
+            self.assertIn("dados", nomes)        # pastas sempre aparecem
+            pg.locator(".tk-seletor-rodape select").select_option(label="Python")
+            self.assertIn("notas.py", pg.locator(".tk-seletor-item .nome").all_inner_texts())
+            pg.locator(".tk-seletor-rodape select").select_option(label="Texto")
+            pg.locator(".tk-seletor-item", has_text="dados.txt").click()
+            pg.locator(".tk-seletor-rodape button.principal").click()
+            linha = self._linha(pg, "ESCOLHEU:")
+            self.assertEqual(Path(linha.split(":", 1)[1].strip()), (projeto / "dados.txt").resolve())
+            self.assertEqual(pg.locator(".tk-seletor-fundo").count(), 0)
+            nav.close()
+
+    def test_seletor_cancelar_devolve_vazio(self):
+        self._preparar_arquivos()
+        programa = "import tkinter as tk\nfrom tkinter import filedialog\nprint('ESCOLHEU:', repr(filedialog.askopenfilename()))\n"
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "cancelar.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            pg.wait_for_selector(".tk-seletor-item", timeout=12000)
+            self.assertTrue(pg.locator(".tk-seletor-rodape button.principal").is_disabled(), "nada marcado: Abrir deve estar desabilitado")
+            pg.locator(".tk-seletor-rodape button", has_text="Cancelar").click()
+            self.assertEqual(self._linha(pg, "ESCOLHEU:"), "ESCOLHEU: ''")
+            nav.close()
+
+    def test_seletor_salvar_acrescenta_a_extensao_e_recusa_nome_com_barra(self):
+        projeto = self._preparar_arquivos()
+        programa = ("import tkinter as tk\nfrom tkinter import filedialog\n"
+                    "print('SALVOU:', filedialog.asksaveasfilename(defaultextension='.txt'))\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "salvar.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            campo = pg.locator(".tk-seletor-rodape input")
+            campo.fill("../fugiu")
+            pg.locator(".tk-seletor-rodape button.principal").click()
+            self.assertEqual(pg.locator(".tk-seletor").count(), 1, "nome com barra deveria ser recusado")
+            campo.fill("relatorio")
+            pg.locator(".tk-seletor-rodape button.principal").click()
+            linha = self._linha(pg, "SALVOU:")
+            self.assertEqual(Path(linha.split(":", 1)[1].strip()), (projeto / "relatorio.txt").resolve())
+            nav.close()
+
+    def test_seletor_escolher_pasta(self):
+        projeto = self._preparar_arquivos()
+        programa = "import tkinter as tk\nfrom tkinter import filedialog\nprint('PASTA:', filedialog.askdirectory())\n"
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "pasta.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            pg.locator(".tk-seletor-item", has_text="dados").first.click()
+            pg.wait_for_function("document.querySelector('.tk-seletor-barra .caminho').textContent.endsWith('/dados')")
+            self.assertEqual(pg.locator(".tk-seletor-item.apagado").count(), 1)  # x.csv aparece apagado
+            pg.locator(".tk-seletor-rodape button.principal").click()
+            linha = self._linha(pg, "PASTA:")
+            self.assertEqual(Path(linha.split(":", 1)[1].strip()), (projeto / "dados").resolve())
+            nav.close()
+
+    def test_seletor_nao_sai_das_pastas_permitidas(self):
+        raiz = self.S.Config.projetos().resolve()
+        programa = ("import tkinter as tk\nfrom tkinter import filedialog\n"
+                    "print('X:', repr(filedialog.askopenfilename(initialdir='/etc')))\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "fora.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            pg.wait_for_function("document.querySelector('.tk-seletor-barra .caminho').textContent.length > 0")
+            caminho = pg.locator(".tk-seletor-barra .caminho").inner_text()
+            self.assertEqual(Path(caminho), raiz)
+            self.assertNotIn("/etc", caminho)
+            self.assertTrue(pg.locator(".tk-seletor-barra button", has_text="Subir").is_disabled())
+            pg.locator(".tk-seletor-rodape button", has_text="Cancelar").click()
+            nav.close()
+
+    def test_parar_o_programa_fecha_o_seletor(self):
+        programa = "import tkinter as tk\nfrom tkinter import filedialog\nfiledialog.askopenfilename()\n"
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "preso.py", programa)
+            pg.wait_for_selector(".tk-seletor", timeout=12000)
+            # o fundo do seletor bloqueia o toque no ■, como numa janela de verdade;
+            # aqui o programa é encerrado por dentro, e o seletor não pode ficar pendurado.
+            pg.evaluate("parar()")
+            pg.wait_for_function("document.querySelectorAll('.tk-seletor-fundo').length === 0", timeout=5000)
+            self.assertEqual(self._botao(pg), "Executar")
+            nav.close()
+
+    def test_fonte_e_aplicada_medida_e_acompanha_mudancas(self):
+        programa = (
+            "import tkinter as tk\nfrom tkinter import font\n"
+            "j = tk.Tk()\n"
+            "f = font.Font(family='Arial', size=24, weight='bold', underline=1)\n"
+            "tk.Label(j, text='Titulo', font=f).pack()\n"
+            "print('LARGURA:', f.measure('Titulo'))\n"
+            "print('LINHA:', f.metrics('linespace'))\n"
+            "j.after(900, lambda: f.configure(size=12))\n"
+            "tk.Button(j, text='Fechar', command=j.destroy).pack()\n"
+            "j.mainloop()\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "fonte.py", programa)
+            pg.wait_for_selector(".tk-janela", timeout=12000)
+            rotulo = pg.locator(".tk-janela .tk-label").first
+            estilo = lambda: rotulo.evaluate("e => { const s = getComputedStyle(e); return [s.fontSize, s.fontWeight, s.textDecorationLine]; }")
+            self.assertEqual(estilo()[0], "32px")
+            self.assertIn(estilo()[1], ("700", "bold"))
+            self.assertIn("underline", estilo()[2])
+            largura = int(self._linha(pg, "LARGURA:").split(":")[1])
+            linha = int(self._linha(pg, "LINHA:").split(":")[1])
+            self.assertGreater(largura, 30)
+            self.assertGreater(linha, 20)
+            pg.wait_for_function("(e) => getComputedStyle(e).fontSize === '16px'", arg=rotulo.element_handle(), timeout=6000)
+            pg.locator(".tk-janela button.tk-button", has_text="Fechar").click()
+            nav.close()
+
+
+    def test_peca_que_expande_cede_espaco_e_o_rodape_continua_visivel(self):
+        # No Tk, o rodapé empacotado primeiro mantém o espaço; o Text alto é que encolhe.
+        programa = ("import tkinter as tk\nj = tk.Tk()\nj.geometry('300x300')\n"
+                    "tk.Label(j, text='RODAPE', relief='sunken').pack(side='bottom', fill='x')\n"
+                    "tk.Text(j, height=30, width=20).pack(fill='both', expand=True)\nj.mainloop()\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "rodape.py", programa)
+            pg.wait_for_selector(".tk-janela", timeout=12000)
+            pg.wait_for_timeout(700)
+            medidas = pg.evaluate("""() => {
+                const j = document.querySelector('.tk-janela').getBoundingClientRect();
+                const r = [...document.querySelectorAll('.tk-janela .tk-label')].find(e => e.textContent === 'RODAPE').getBoundingClientRect();
+                const t = document.querySelector('.tk-janela textarea').getBoundingClientRect();
+                return {janelaBase: j.bottom, rodapeBase: r.bottom, alturaTexto: t.height};
+            }""")
+            self.assertLessEqual(medidas["rodapeBase"], medidas["janelaBase"] + 1, medidas)
+            self.assertLess(medidas["alturaTexto"], 300, medidas)
+            nav.close()
+
+    def test_peca_sem_expand_nao_encolhe(self):
+        programa = ("import tkinter as tk\nj = tk.Tk()\nj.geometry('300x120')\n"
+                    "tk.Text(j, height=3, width=20).pack()\n"
+                    "tk.Button(j, text='Fixo', height=3).pack()\nj.mainloop()\n")
+        with sync_playwright() as pw:
+            nav, pg = self._abrir(pw)
+            self._rodar_programa(pg, "fixo.py", programa)
+            pg.wait_for_selector(".tk-janela", timeout=12000)
+            pg.wait_for_timeout(500)
+            alturas = pg.evaluate("""() => [document.querySelector('.tk-janela textarea').getBoundingClientRect().height,
+                                           document.querySelector('.tk-janela button.tk-button').getBoundingClientRect().height]""")
+            self.assertGreater(alturas[0], 50, alturas)   # 3 linhas, sem encolher
+            self.assertGreater(alturas[1], 40, alturas)
+            nav.close()
+
+
 if __name__ == "__main__":
     unittest.main()

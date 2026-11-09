@@ -247,6 +247,24 @@ svg { display: block; flex: 0 0 auto; }
 .tk-menubar { display: flex; flex-wrap: wrap; background: #f0f0f0; border-bottom: 1px solid #c0c0c0; font: 13px "Segoe UI", system-ui, sans-serif; flex: 0 0 auto; }
 .tk-menubar .tk-menu-topo { padding: 4px 12px; cursor: pointer; user-select: none; }
 .tk-menubar .tk-menu-topo:hover, .tk-menubar .tk-menu-topo.aberto { background: #cce4f7; }
+.tk-seletor-fundo { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.tk-seletor { background: #f0f0f0; color: #000; border-radius: 6px; box-shadow: 0 8px 28px rgba(0,0,0,0.5); width: min(560px, 100%); max-height: min(560px, 92vh); display: flex; flex-direction: column; font: 14px "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+.tk-seletor-titulo { padding: 10px 14px; font-weight: 600; background: #fff; border-bottom: 1px solid #c8c8c8; }
+.tk-seletor-barra { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #d8d8d8; }
+.tk-seletor-barra .caminho { flex: 1 1 100%; font-size: 12px; color: #444; word-break: break-all; }
+.tk-seletor button { font: inherit; padding: 6px 12px; border: 1px solid #9a9a9a; background: #e6e6e6; border-radius: 4px; cursor: pointer; min-height: 34px; }
+.tk-seletor button:disabled { opacity: 0.45; cursor: default; }
+.tk-seletor button.principal { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.tk-seletor-lista { flex: 1; overflow-y: auto; background: #fff; min-height: 160px; }
+.tk-seletor-item { display: flex; gap: 8px; align-items: center; padding: 9px 12px; border-bottom: 1px solid #eee; cursor: pointer; user-select: none; }
+.tk-seletor-item .nome { flex: 1; word-break: break-all; }
+.tk-seletor-item .tamanho { font-size: 12px; color: #777; white-space: nowrap; }
+.tk-seletor-item.marcado { background: #cce4f7; }
+.tk-seletor-item.apagado { opacity: 0.4; cursor: default; }
+.tk-seletor-vazio { padding: 16px; color: #666; }
+.tk-seletor-rodape { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; padding: 10px; border-top: 1px solid #c8c8c8; }
+.tk-seletor-rodape input, .tk-seletor-rodape select { font: inherit; padding: 6px; min-height: 34px; border: 1px solid #9a9a9a; border-radius: 4px; background: #fff; }
+.tk-seletor-rodape input { flex: 1 1 180px; min-width: 0; }
 .tk-menu-popup { position: absolute; z-index: 200; pointer-events: auto; background: #fff; border: 1px solid #adadad; box-shadow: 0 4px 14px rgba(0,0,0,0.3); min-width: 160px; padding: 2px 0; }
 .tk-menu-popup .tk-menu-item { padding: 6px 24px 6px 16px; cursor: pointer; white-space: nowrap; font: 13px "Segoe UI", system-ui, sans-serif; display: flex; justify-content: space-between; gap: 16px; }
 .tk-menu-popup .tk-menu-item:hover { background: #cce4f7; }
@@ -505,6 +523,40 @@ const TK = (() => {
     const mapa = {courier: '"Courier New", Courier, monospace', "courier new": '"Courier New", Courier, monospace', helvetica: "Helvetica, Arial, sans-serif", times: '"Times New Roman", Times, serif', tkdefaultfont: "system-ui, sans-serif", tkfixedfont: "monospace", consolas: "Consolas, monospace"};
     const fam = mapa[familia.toLowerCase()] || `"${familia}", system-ui, sans-serif`;
     return `${estilos.includes("italic") ? "italic " : ""}${estilos.includes("bold") ? "bold " : ""}${px}px ${fam}`;
+  }
+
+  function decoracaoFonte(f) {
+    if (f === null || f === undefined || f === "") return "none";
+    const partes = Array.isArray(f) ? f.map(String) : String(f).trim().split(/\s+/);
+    const estilos = partes.slice(2).join(" ").toLowerCase();
+    const d = [];
+    if (estilos.includes("underline")) d.push("underline");
+    if (estilos.includes("overstrike")) d.push("line-through");
+    return d.length ? d.join(" ") : "none";
+  }
+
+  let _canvasMedida = null;
+  function contextoDeMedida(f) {
+    if (!_canvasMedida) _canvasMedida = document.createElement("canvas");
+    const ctx = _canvasMedida.getContext("2d");
+    ctx.font = fonte(f) || "13px sans-serif";
+    return ctx;
+  }
+
+  function medirTexto(f, texto) {
+    const ctx = contextoDeMedida(f);
+    const linhas = String(texto === null || texto === undefined ? "" : texto).split("\n");
+    return Math.round(Math.max(...linhas.map((l) => ctx.measureText(l).width)));
+  }
+
+  function metricasFonte(f) {
+    const ctx = contextoDeMedida(f);
+    const px = parseFloat(((ctx.font || "").match(/(\d+(?:\.\d+)?)px/) || [0, 13])[1]);
+    const m = ctx.measureText("Mg");
+    const ascent = Math.round(m.fontBoundingBoxAscent !== undefined ? m.fontBoundingBoxAscent : px * 0.9);
+    const descent = Math.round(m.fontBoundingBoxDescent !== undefined ? m.fontBoundingBoxDescent : px * 0.25);
+    const fixo = ctx.measureText("i").width === ctx.measureText("M").width ? 1 : 0;
+    return {ascent, descent, linespace: ascent + descent, fixed: fixo};
   }
 
   function partesAncora(a) {
@@ -791,6 +843,7 @@ const TK = (() => {
       } else if (k === "font") {
         const f = fonte(v);
         if (f) s.font = f;
+        s.textDecoration = decoracaoFonte(v);
       } else if (k === "bg" || k === "background") {
         const c = cor(v);
         if (c) {
@@ -855,6 +908,8 @@ const TK = (() => {
     s.minWidth = r.esticaH ? largura : "";
     s.height = r.esticaV ? "auto" : altura;
     s.minHeight = r.esticaV ? altura : "";
+    if (r.encolhe === "column") s.minHeight = "0";
+    else if (r.encolhe === "row") s.minWidth = "0";
     if (r.tipo === "canvas") {
       r.svg.setAttribute("width", String(r.largura));
       r.svg.setAttribute("height", String(r.altura));
@@ -970,7 +1025,9 @@ const TK = (() => {
     const lateral = pai.direcao === "column" ? (pa.h === "w" ? "flex-start" : pa.h === "e" ? "flex-end" : "center") : pa.v === "n" ? "flex-start" : pa.v === "s" ? "flex-end" : "center";
     s.alignSelf = estica ? "stretch" : lateral;
     s.flexGrow = o.expand ? "1" : "0";
-    s.flexShrink = "0";
+    // No Tk o tamanho pedido é só um desejo: quem tem expand cede espaço quando a janela é menor.
+    s.flexShrink = o.expand ? "1" : "0";
+    r.encolhe = o.expand ? pai.direcao : null;
     const px = margem(o.padx);
     const py = margem(o.pady);
     s.margin = `${py[0]}px ${px[1]}px ${py[1]}px ${px[0]}px`;
@@ -1367,7 +1424,181 @@ const TK = (() => {
     return JSON.stringify(resposta === null ? {ok: false} : {ok: true, valor: resposta});
   }
 
+  const seletoresAbertos = new Set();
+
+  function padraoParaRegex(padrao) {
+    const t = String(padrao).trim();
+    if (t === "*" || t === "*.*") return /.*/;
+    const escapado = t.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".");
+    return new RegExp("^" + escapado + "$", "i");
+  }
+
+  function escolherArquivo(op) {
+    return new Promise((resolver) => {
+      const modo = op.modo || "abrir";
+      const tipos = Array.isArray(op.tipos) ? op.tipos : [];
+      const rotuloOk = {abrir: "Abrir", abrir_varios: "Abrir", salvar: "Salvar", pasta: "Escolher esta pasta"}[modo] || "OK";
+      const fundo = document.createElement("div");
+      fundo.className = "tk-seletor-fundo";
+      const caixa = document.createElement("div");
+      caixa.className = "tk-seletor";
+      const titulo = document.createElement("div");
+      titulo.className = "tk-seletor-titulo";
+      titulo.textContent = op.titulo || rotuloOk;
+      const barra = document.createElement("div");
+      barra.className = "tk-seletor-barra";
+      const subir = document.createElement("button");
+      subir.type = "button";
+      subir.textContent = "\u2191 Subir";
+      const atalhos = document.createElement("span");
+      const caminhoEl = document.createElement("div");
+      caminhoEl.className = "caminho";
+      barra.append(subir, atalhos, caminhoEl);
+      const lista = document.createElement("div");
+      lista.className = "tk-seletor-lista";
+      const rodape = document.createElement("div");
+      rodape.className = "tk-seletor-rodape";
+      let campoNome = null;
+      if (modo === "salvar") {
+        campoNome = document.createElement("input");
+        campoNome.type = "text";
+        campoNome.placeholder = "Nome do arquivo";
+        campoNome.value = op.nome || "";
+        rodape.append(campoNome);
+      }
+      let filtro = null;
+      if (tipos.length > 1 && modo !== "pasta") {
+        filtro = document.createElement("select");
+        tipos.forEach((t, i) => {
+          const o = document.createElement("option");
+          o.value = String(i);
+          o.textContent = String(t[0]);
+          filtro.append(o);
+        });
+        rodape.append(filtro);
+      }
+      const cancelar = document.createElement("button");
+      cancelar.type = "button";
+      cancelar.textContent = "Cancelar";
+      const confirmarBtn = document.createElement("button");
+      confirmarBtn.type = "button";
+      confirmarBtn.className = "principal";
+      confirmarBtn.textContent = rotuloOk;
+      confirmarBtn.disabled = true;  // só habilita depois que a lista carregar
+      rodape.append(cancelar, confirmarBtn);
+      caixa.append(titulo, barra, lista, rodape);
+      fundo.append(caixa);
+      document.body.append(fundo);
+
+      let dados = null;
+      const marcados = new Set();
+      const fechar = (valor) => {
+        seletoresAbertos.delete(fechar);
+        fundo.remove();
+        resolver(valor);
+      };
+      seletoresAbertos.add(fechar);
+
+      const junta = (pasta, nome) => pasta.replace(/\/+$/, "") + "/" + nome;
+      const aceita = (nome) => {
+        if (!tipos.length) return true;
+        const t = tipos[filtro ? Number(filtro.value) : 0] || tipos[0];
+        return (t[1] || ["*"]).some((p) => padraoParaRegex(p).test(nome));
+      };
+
+      function atualizarBotao() {
+        confirmarBtn.disabled = modo === "salvar" ? false : modo === "pasta" ? !dados : marcados.size === 0;
+      }
+
+      function desenhar() {
+        caminhoEl.textContent = dados.caminho;
+        subir.disabled = !dados.pai;
+        atalhos.textContent = "";
+        for (const raiz of dados.raizes || []) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.textContent = raiz.nome;
+          b.addEventListener("click", () => carregar(raiz.caminho));
+          atalhos.append(b, " ");
+        }
+        lista.textContent = "";
+        const itens = dados.itens.filter((i) => i.pasta || aceita(i.nome));
+        if (!itens.length) {
+          const vazio = document.createElement("div");
+          vazio.className = "tk-seletor-vazio";
+          vazio.textContent = "Nada para mostrar nesta pasta.";
+          lista.append(vazio);
+        }
+        for (const item of itens) {
+          const linha = document.createElement("div");
+          linha.className = "tk-seletor-item";
+          const icone = document.createElement("span");
+          icone.textContent = item.pasta ? "\uD83D\uDCC1" : "\uD83D\uDCC4";
+          const nome = document.createElement("span");
+          nome.className = "nome";
+          nome.textContent = item.nome;
+          linha.append(icone, nome);
+          if (!item.pasta) {
+            const tam = document.createElement("span");
+            tam.className = "tamanho";
+            tam.textContent = item.tamanho >= 1024 ? Math.round(item.tamanho / 1024) + " KB" : item.tamanho + " B";
+            linha.append(tam);
+          }
+          if (modo === "pasta" && !item.pasta) linha.classList.add("apagado");
+          if (marcados.has(item.nome)) linha.classList.add("marcado");
+          linha.addEventListener("click", () => {
+            if (item.pasta) return carregar(junta(dados.caminho, item.nome));
+            if (modo === "pasta") return;
+            if (modo === "salvar") {
+              campoNome.value = item.nome;
+              return;
+            }
+            if (modo === "abrir") marcados.clear();
+            if (marcados.has(item.nome)) marcados.delete(item.nome);
+            else marcados.add(item.nome);
+            desenhar();
+          });
+          lista.append(linha);
+        }
+        atualizarBotao();
+      }
+
+      async function carregar(caminho, primeira) {
+        lista.textContent = "Carregando...";
+        try {
+          dados = await API("/api/pasta?caminho=" + encodeURIComponent(caminho || ""));
+        } catch (e) {
+          if (primeira) return carregar("", false);
+          lista.textContent = (e && e.message) || "Não foi possível abrir esta pasta.";
+          return;
+        }
+        marcados.clear();
+        desenhar();
+      }
+
+      subir.addEventListener("click", () => dados && dados.pai && carregar(dados.pai));
+      if (filtro) filtro.addEventListener("change", desenhar);
+      cancelar.addEventListener("click", () => fechar(null));
+      confirmarBtn.addEventListener("click", () => {
+        if (!dados) return;
+        if (modo === "pasta") return fechar({caminhos: [dados.caminho]});
+        if (modo === "salvar") {
+          let nome = campoNome.value.trim();
+          if (!nome || /[\/]/.test(nome)) return;
+          if (op.extensao && !/\.[^.]+$/.test(nome)) nome += op.extensao;
+          const existe = dados.itens.some((i) => !i.pasta && i.nome === nome);
+          if (existe && op.sobrescrever !== false && !window.confirm(nome + " já existe. Substituir?")) return;
+          return fechar({caminhos: [junta(dados.caminho, nome)]});
+        }
+        if (!marcados.size) return;
+        fechar({caminhos: [...marcados].map((n) => junta(dados.caminho, n))});
+      });
+      carregar(op.pasta || "", true);
+    });
+  }
+
   function limpar() {
+    for (const fecharSeletor of [...seletoresAbertos]) fecharSeletor(null);
     for (const cid of Object.keys(afters)) cancelarAfter(cid);
     for (const [id, r] of Object.entries(w)) {
       if (r.tipo === "tk") destruir(id);
@@ -1580,7 +1811,7 @@ const TK = (() => {
     if (filho) filho.scrollIntoView({block: "nearest"});
   }
 
-  return {imagemRegistrar, menuBarra, notebookAba, notebookTexto, notebookSelecionar, notebookSelecionada, listaDefinir, listaVer, novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
+  return {escolherArquivo, medirTexto, metricasFonte, imagemRegistrar, menuBarra, notebookAba, notebookTexto, notebookSelecionar, notebookSelecionada, listaDefinir, listaVer, novaJanela, criar, configurar, grid, pack, place, esconder, destruir, pesoGrid, bind, unbind, after, cancelarAfter, aoMudar, aoFechar, titulo, tamanho, focar, medida, rolarFim, canvasCriar, canvasCoords, canvasConfig, canvasDel, canvasOrdem, canvasBind, mensagem, confirmar, perguntarTexto, limpar, abertas};
 })();
 window.TK = TK;
 
@@ -1615,7 +1846,11 @@ function executarTk(comando, p) {
       console.error(e);
     }
   }
-  if (comando.pedido) API("/api/tk-resposta", { id: p.id, pedido: comando.pedido, valor: valor === undefined ? null : valor }).catch(() => {});
+  const responder = (v) => {
+    if (comando.pedido) API("/api/tk-resposta", { id: p.id, pedido: comando.pedido, valor: v === undefined ? null : v }).catch(() => {});
+  };
+  if (valor && typeof valor.then === "function") valor.then(responder, () => responder(null));
+  else responder(valor);
 }
 const terminal = $("terminal");
 const painel = $("painel");

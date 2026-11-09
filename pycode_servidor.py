@@ -47,6 +47,7 @@ PROIBIDOS_PROJETO = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
 RESERVADOS = {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(1, 10)}, *{f"LPT{i}" for i in range(1, 10)}}
 LIMITE_ARQUIVO = 1_000_000
 LIMITE_ZIP_ENTRADAS = 500
+LIMITE_LISTAGEM = 2000
 LIMITE_ZIP_TOTAL = 20_000_000
 RAZAO_ZIP_MAXIMA = 200
 LIMITE_SAIDA = 2_000_000
@@ -166,6 +167,48 @@ def mandar_lixeira(caminho, rotulo):
     Config.lixeira().mkdir(parents=True, exist_ok=True)
     destino = Config.lixeira() / f"{time.strftime('%Y%m%d-%H%M%S')}-{rotulo}"
     shutil.move(str(caminho), str(destino))
+
+
+def raizes_de_navegacao():
+    """Pastas que o seletor de arquivos pode mostrar: os projetos e, no Android, o armazenamento."""
+    raizes = [Config.projetos().resolve()]
+    compartilhado = Path("/storage/emulated/0")
+    if compartilhado.is_dir() and os.access(compartilhado, os.R_OK):
+        raizes.append(compartilhado.resolve())
+    return raizes
+
+
+def listar_pasta(texto):
+    """Lista uma pasta para o seletor de arquivos. Só lista nomes e só dentro das raízes permitidas."""
+    raizes = raizes_de_navegacao()
+    try:
+        alvo = Path(texto or str(raizes[0])).expanduser().resolve()
+    except (OSError, RuntimeError, ValueError):
+        raise ErroUsuario("Pasta inválida.", 400)
+    if not any(alvo == raiz or raiz in alvo.parents for raiz in raizes):
+        raise ErroUsuario("Essa pasta está fora das pastas permitidas.", 403)
+    if not alvo.is_dir():
+        raise ErroUsuario("Pasta não encontrada.", 404)
+    itens = []
+    try:
+        entradas = sorted(alvo.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+    except PermissionError:
+        raise ErroUsuario("Sem permissão para ler esta pasta.", 403)
+    for entrada in entradas:
+        if entrada.name.startswith("."):
+            continue
+        try:
+            pasta = entrada.is_dir()
+            tamanho = 0 if pasta else entrada.stat().st_size
+        except OSError:
+            continue
+        itens.append({"nome": entrada.name, "pasta": pasta, "tamanho": tamanho})
+        if len(itens) >= LIMITE_LISTAGEM:
+            break
+    return {"caminho": str(alvo),
+            "pai": None if alvo in raizes else str(alvo.parent),
+            "itens": itens,
+            "raizes": [{"nome": "Projetos" if i == 0 else "Armazenamento", "caminho": str(r)} for i, r in enumerate(raizes)]}
 
 
 def listar_projetos():
@@ -616,6 +659,8 @@ class Manipulador(BaseHTTPRequestHandler):
         if rota == "/api/projeto":
             pasta = pasta_projeto(q.get("nome"))
             return {"nome": pasta.name, "arquivos": ler_arquivos(pasta)}
+        if rota == "/api/pasta":
+            return listar_pasta(q.get("caminho"))
         if rota == "/api/saida":
             processo = Processo.todos.get(q.get("id", ""))
             if not processo:
