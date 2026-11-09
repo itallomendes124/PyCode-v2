@@ -6,7 +6,7 @@ corrigido e o que **não** foi testado. Onde algo não foi verificado, está esc
 ## Resumo
 
 - Foram encontradas **4 falhas de segurança** no servidor local (uma delas só corrigida no APK), **2 melhorias de robustez** e **1 defeito de confiabilidade** (o botão preso em ■, item A7). Todos os corrigidos têm teste.
-- **179 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
+- **189 testes automatizados** passam (`testes/resultado.txt` guarda a execução).
 - Os testes de segurança e do botão de executar foram conferidos **estragando o código de propósito**: com o defeito de volta, eles falham.
 - **Não foi testado em aparelho Android real.** Veja "O que não foi testado".
 - Durante o trabalho, o pacote `pycode-widgets.zip` desfez duas correções anteriores (botão de executar e nomes do PyCode v2). Foi corrigido e há teste de regressão. Veja o item R0.
@@ -55,6 +55,24 @@ O `tkinter.filedialog` do PyCode abre um seletor próprio, e ele precisa listar 
 - Os 9 testes de `TestListarPasta` cobrem token, `..`, link simbólico, pasta inexistente, limite e que nada de conteúdo vaza. Tirei a checagem de pasta permitida de propósito, e 3 testes falharam.
 - **Risco residual:** o app passa a poder mostrar *os nomes* dos arquivos do armazenamento compartilhado a quem tem o token. Quem já tem o token e roda código no app já podia ler esses arquivos pelo `open()`, então não é um poder novo, mas é uma superfície nova.
 
+## Desempenho: eventos contínuos (Fase C)
+
+O bloco de notas ficou "meio lento" no tablet. Medi aqui, arrastando o `Scale` de 8 a 32 (24 eventos) e vendo quanto a fonte demorava para chegar ao tamanho final depois do último toque:
+
+| Situação | Atraso |
+| --- | --- |
+| Como estava (biblioteca antiga e exemplo antigo) | 1.757 ms |
+| Biblioteca nova, exemplo antigo | 173 ms |
+| Biblioteca nova, exemplo novo | 132 ms |
+
+**Causa:** cada pergunta que espera resposta da página (como `font.measure`) custa uma ida e volta de uns 70 ms. O tratador do `Scale` fazia uma por evento, e os eventos eram processados um por um, formando fila.
+
+**Correções:** (1) eventos contínuos seguidos do mesmo widget (arrastar um `Scale`, digitar num campo, mover o mouse) são juntados e só o último é entregue, como o Tk faz; (2) `Font.measure` guarda a resposta para o mesmo texto e a mesma fonte; (3) o rodapé do exemplo é refeito 250 ms depois da última mudança; (4) a listagem de pastas usa `os.scandir`, que gasta menos chamadas ao sistema.
+
+**O que a junção nunca faz:** descartar cliques, teclas ou mudanças de escolha. Isso tem teste (`test_eventos.py`) e foi conferido estragando o código.
+
+**Não medi no tablet.** Os números acima são do meu ambiente; a proporção deve se manter, mas o tempo absoluto no aparelho é maior.
+
 ## Regressões que eu causei (R0)
 
 O pacote `pycode-widgets.zip` sobrescreveu `web/index.html` e `README.md` com cópias antigas. Resultado no GitHub:
@@ -90,13 +108,14 @@ Execução em Linux, Python 3.12, com o executor e o Chromium simulando o caminh
 | `test_projetos_arquivos.py` | 22 | projetos, arquivos, traversal, limites, `.zip`, e a rota `/api/pasta` do seletor de arquivos |
 | `test_executor.py` | 16 | saída, `input()`, erros, parar, órfãos, saída limitada, fim do programa como no Android |
 | `test_tkinter.py` | 11 | widgets básicos, variáveis, layout, eventos |
-| `test_tkinter_fontes_arquivos.py` | 28 | `tkinter.font` e `tkinter.filedialog`, inclusive pela ponte real do executor |
+| `test_eventos.py` | 9 | junção de eventos contínuos pela ponte real: junta o que deve e nunca descarta cliques, teclas ou escolhas |
+| `test_tkinter_fontes_arquivos.py` | 29 | `tkinter.font` e `tkinter.filedialog`, inclusive pela ponte real do executor |
 | `test_tkinter_widgets.py` | 21 | Checkbutton, Radiobutton, Scale, Spinbox, Combobox, Notebook, Menu, PhotoImage |
 | `test_calculadora.py` | 11 | contas, conversor, segurança do avaliador |
 | `test_build.py` | 19 | o build normal não muda: `pip` e identificador novo só existem na variante com bibliotecas |
 | `test_documentos.py` | 8 | o README e as notas não prometem nem negam o que o código não faz |
 | `test_navegador.py` | 16 | página real: token, botão ▶/■, janela `tkinter`, exportar, widgets, seletor de arquivos, fontes, empacotamento |
-| **Total** | **179** | **todos passam** |
+| **Total** | **189** | **todos passam** |
 
 Para rodar: `python3 -m unittest discover -s testes -p "test_*.py"`. Veja `testes/README.md`.
 
@@ -119,6 +138,10 @@ Estraguei o código de propósito e conferi se os testes reclamam:
 | a página responde ao Python sem esperar a Promise | falha (o seletor fecha sozinho) |
 | o README volta a ter linha repetida e o texto antigo sobre senha | falha (2 testes) |
 | peças com `expand` voltam a não encolher | falha (rodapé sai da janela) |
+| a junção de eventos deixa de funcionar | falha (2 testes) |
+| a junção passa a juntar cliques, teclas e escolhas | falha (2 testes) |
+| a junção passa a misturar eventos de widgets diferentes | falha (1 teste) |
+| `font.measure` deixa de guardar a resposta | falha (1 teste) |
 
 Um dos testes do botão passou mesmo com o defeito de volta. Eu o reescrevi até ele falhar. Por isso a conferência existe.
 

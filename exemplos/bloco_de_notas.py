@@ -7,7 +7,7 @@ janela.title("Bloco de notas")
 janela.geometry("440x460")
 
 fonte = font.Font(family="Courier", size=12)
-atual = {"caminho": None}
+atual = {"caminho": None, "agendado": None}
 status = tk.StringVar(value="Arquivo novo")
 
 texto = tk.Text(janela, font=fonte, wrap="word", height=14)
@@ -18,6 +18,13 @@ def atualizar_status(evento=None):
     maior = max(linhas, key=len)
     nome = atual["caminho"].rsplit("/", 1)[-1] if atual["caminho"] else "sem nome"
     status.set(f"{nome} | {len(linhas)} linhas | maior linha: {fonte.measure(maior)} px")
+
+
+def agendar_status(evento=None):
+    """Medir texto pergunta à página e demora. Por isso o rodapé só é refeito 250 ms depois da última mudança."""
+    if atual["agendado"] is not None:
+        janela.after_cancel(atual["agendado"])
+    atual["agendado"] = janela.after(250, atualizar_status)
 
 
 def abrir():
@@ -62,12 +69,12 @@ def salvar():
 
 def mudar_tamanho(valor):
     fonte.configure(size=int(float(valor)))  # a fonte muda em todos os widgets que a usam
-    atualizar_status()
+    agendar_status()
 
 
 def alternar_negrito():
     fonte.configure(weight="normal" if fonte["weight"] == "bold" else "bold")
-    atualizar_status()
+    agendar_status()
 
 
 barra = tk.Menu(janela)
@@ -90,7 +97,7 @@ tk.Button(controles, text="Negrito", command=alternar_negrito).pack(side="left",
 tk.Label(janela, textvariable=status, anchor="w", relief="sunken").pack(side="bottom", fill="x", padx=6, pady=4)
 texto.pack(fill="both", expand=True, padx=6)
 texto.insert("1.0", "Use o menu Arquivo para abrir ou salvar.\nMexa no tamanho e no negrito.")
-texto.bind("<KeyRelease>", atualizar_status)
+texto.bind("<KeyRelease>", agendar_status)
 atualizar_status()
 
 janela.mainloop()

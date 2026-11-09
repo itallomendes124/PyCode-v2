@@ -729,7 +729,7 @@ const TK = (() => {
     if (tipo === "entry" || tipo === "text") {
       el.addEventListener("input", () => {
         const atual = w[id];
-        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: el.value});
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, continuo: 1, valor: el.value});
       });
     }
     if (tipo === "checkbutton") {
@@ -752,7 +752,7 @@ const TK = (() => {
       faixa.addEventListener("input", () => {
         num.textContent = faixa.value;
         const atual = w[id];
-        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: faixa.value});
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, continuo: 1, valor: faixa.value});
       });
     }
     if (tipo === "combobox") {
@@ -783,7 +783,7 @@ const TK = (() => {
       baixo.addEventListener("click", () => passo(-1));
       campo.addEventListener("input", () => {
         const atual = w[id];
-        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, valor: campo.value});
+        if (atual && atual.aoMudar) chamar(atual.aoMudar, {_interno: 1, continuo: 1, valor: campo.value});
       });
     }
     aparencia(id);

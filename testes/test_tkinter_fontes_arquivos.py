@@ -130,6 +130,17 @@ class TestFont(unittest.TestCase):
         self.assertEqual(f.measure("abcd"), 28)
         self.assertEqual(falso.ultima("medirTexto"), (["Arial", 12, "bold"], "abcd"))
 
+    def test_measure_guarda_a_resposta_para_o_mesmo_texto_e_a_mesma_fonte(self):
+        tk, falso = carregar({"medirTexto": lambda fonte, texto: 10 * len(texto)})
+        f = tk.font.Font(family="Arial", size=12)
+        for _ in range(5):
+            self.assertEqual(f.measure("abc"), 30)
+        self.assertEqual(len([n for n, _ in falso.chamadas if n == "medirTexto"]), 1)
+        f.measure("outro texto")                       # texto diferente: pergunta de novo
+        f.configure(size=20)
+        f.measure("abc")                               # fonte diferente: pergunta de novo
+        self.assertEqual(len([n for n, _ in falso.chamadas if n == "medirTexto"]), 3)
+
     def test_metrics(self):
         tk, falso = carregar({"metricasFonte": {"ascent": 11, "descent": 3, "linespace": 14, "fixed": 0}})
         f = tk.font.Font(size=10)

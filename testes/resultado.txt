@@ -1,4 +1,4 @@
-PyCode v2 - execucao dos testes em 2026-11-07 (Linux, Python 3.12.3)
+PyCode v2 - execucao dos testes em 2026-11-09 (Linux, Python 3.12.3)
 Comando: python3 -W ignore -m unittest discover -s testes -p "test_*.py" -v
 
 test_cabecalho_fixo_1_nao_vale_mais ... ok
@@ -66,6 +66,15 @@ test_nenhum_item_de_lista_repetido ... ok
 test_o_que_o_texto_diz_que_existe_existe ... ok
 test_o_que_o_texto_diz_que_nao_existe_realmente_nao_existe ... ok
 test_o_readme_cita_a_secao_de_seguranca_e_a_de_testes ... ok
+test_arrastar_o_scale_entrega_so_o_ultimo_valor ... ok
+test_cliques_seguidos_nunca_sao_descartados ... ok
+test_dado_estranho_nao_derruba_a_juncao ... ok
+test_digitar_num_campo_entrega_o_texto_completo_uma_vez ... ok
+test_fim_do_programa_ainda_encerra_depois_de_processar_o_que_chegou ... ok
+test_movimento_do_mouse_e_juntado_mas_o_clique_no_meio_nao ... ok
+test_mudancas_de_escolha_seguidas_nao_sao_descartadas ... ok
+test_teclas_seguidas_nunca_sao_descartadas ... ok
+test_widgets_diferentes_alternados_mantem_a_ordem ... ok
 test_erro_no_programa_tambem_termina ... ok
 test_programa_simples_termina_mesmo_com_a_thread_principal_viva ... ok
 test_thread_daemon_do_usuario_nao_segura_o_fim ... ok
@@ -147,6 +156,7 @@ test_copy_e_independente_e_tem_outro_nome ... ok
 test_descricoes_aceitas ... ok
 test_families_devolve_nomes_ordenados ... ok
 test_fontes_nomeadas ... ok
+test_measure_guarda_a_resposta_para_o_mesmo_texto_e_a_mesma_fonte ... ok
 test_measure_pergunta_a_pagina ... ok
 test_metrics ... ok
 test_nome_proprio_e_localizavel ... ok
@@ -180,5 +190,5 @@ test_novos_widgets_existem_no_ttk ... ok
 test_photoimage_arquivo_inexistente_da_erro_claro ... ok
 test_photoimage_de_arquivo ... ok
 test_photoimage_de_bytes_vira_data_url ... ok
-Ran 179 tests in 105.589s
+Ran 189 tests in 110.320s
 OK

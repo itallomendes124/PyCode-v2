@@ -189,22 +189,26 @@ def listar_pasta(texto):
         raise ErroUsuario("Essa pasta está fora das pastas permitidas.", 403)
     if not alvo.is_dir():
         raise ErroUsuario("Pasta não encontrada.", 404)
-    itens = []
+    achados = []
     try:
-        entradas = sorted(alvo.iterdir(), key=lambda e: (not e.is_dir(), e.name.lower()))
+        with os.scandir(alvo) as varredura:
+            for entrada in varredura:
+                if entrada.name.startswith("."):
+                    continue
+                try:
+                    achados.append((entrada.is_dir(), entrada))
+                except OSError:
+                    continue
     except PermissionError:
         raise ErroUsuario("Sem permissão para ler esta pasta.", 403)
-    for entrada in entradas:
-        if entrada.name.startswith("."):
-            continue
+    achados.sort(key=lambda par: (not par[0], par[1].name.lower()))
+    itens = []
+    for pasta, entrada in achados[:LIMITE_LISTAGEM]:
         try:
-            pasta = entrada.is_dir()
             tamanho = 0 if pasta else entrada.stat().st_size
         except OSError:
             continue
         itens.append({"nome": entrada.name, "pasta": pasta, "tamanho": tamanho})
-        if len(itens) >= LIMITE_LISTAGEM:
-            break
     return {"caminho": str(alvo),
             "pai": None if alvo in raizes else str(alvo.parent),
             "itens": itens,

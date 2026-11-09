@@ -17,6 +17,7 @@ Usam só a biblioteca padrão (`unittest`). Nada para instalar.
     python3 -m unittest testes.test_build
     python3 -m unittest testes.test_tkinter_fontes_arquivos
     python3 -m unittest testes.test_documentos
+    python3 -m unittest testes.test_eventos
     python3 -m unittest testes.test_navegador     # precisa do Playwright; pula sozinho sem ele
 
 ## O que cada arquivo cobre
@@ -30,6 +31,7 @@ Usam só a biblioteca padrão (`unittest`). Nada para instalar.
 | `test_tkinter_widgets.py` | `Checkbutton`, `Radiobutton`, `Scale`, `Spinbox`, `Combobox`, `Notebook`, `Menu`, `PhotoImage` |
 | `test_calculadora.py` | `exemplos/calculadora.py`: contas, conversor e, principalmente, que o avaliador recusa código que não seja conta |
 | `test_tkinter_fontes_arquivos.py` | `tkinter.font` (`Font`, `measure`, `metrics`, fontes nomeadas) e `tkinter.filedialog` (abrir, salvar, pasta), inclusive pela ponte real |
+| `test_eventos.py` | junção de eventos contínuos pela ponte real (Scale, campo, mouse) e a garantia de que cliques, teclas e escolhas nunca são descartados |
 | `test_documentos.py` | o README e as notas conferem com o código: o que diz existir existe, o que diz faltar falta, sem linhas repetidas |
 | `test_build.py` | o build normal não muda: o `pip` e o identificador novo só existem na variante com bibliotecas, e os dois workflows não se misturam |
 | `test_navegador.py` | página real no Chromium: token, botão de executar voltando a ▶, janela `tkinter`, exportar, widgets novos |

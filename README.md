@@ -98,6 +98,8 @@ No Windows, para criar um atalho na área de trabalho:
 - Ao tocar em ▶, ele roda o seu arquivo como um programa separado. O botão ■ encerra esse programa.
 - A interface é uma página com o editor [Ace](https://ace.c9.io/), baixado na instalação.
 - O `tkinter` próprio manda comandos de desenho para a página.
+- Quando o programa demora, os eventos contínuos seguidos (arrastar um `Scale`, digitar num campo, mover o mouse) são juntados e só o último é entregue, como no Tk. Cliques, teclas e mudanças de escolha nunca são descartados.
+- Perguntar algo à página (por exemplo `font.measure`) custa uma ida e volta de uns 70 ms; a mesma pergunta repetida usa a resposta guardada. Evite perguntar a cada tecla.
 
 ## Limites
 

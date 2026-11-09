@@ -235,6 +235,46 @@ def _cancelar(cid):
         _timers_ativos.discard(cid)
 
 
+def _chave_de_juncao(mensagem):
+    """Eventos seguidos com a mesma chave só valem pelo último (o Tk faz o mesmo com o movimento do mouse).
+
+    Só entram aqui o que leva o valor completo a cada vez: arrastar um Scale, digitar num campo e o
+    movimento do mouse. Cliques, teclas e mudanças de escolha nunca são descartados.
+    """
+    if "cid" not in mensagem:
+        return None
+    dados = mensagem.get("dados")
+    if isinstance(dados, str):  # a página manda o dado do evento como texto JSON
+        try:
+            dados = json.loads(dados)
+        except ValueError:
+            return None
+    if not isinstance(dados, dict):
+        return None
+    if dados.get("continuo"):
+        return (mensagem["cid"], "continuo")
+    if dados.get("type") == "Motion":
+        return (mensagem["cid"], "Motion")
+    return None
+
+
+def _lote_de_eventos(primeira):
+    """Junta o que já chegou e descarta o que o evento seguinte do mesmo tipo torna inútil."""
+    lote = [primeira]
+    while not lote[-1].get("fim"):
+        proxima = TK.proximo(0)
+        if proxima is None:
+            break
+        lote.append(proxima)
+    saida = []
+    for i, mensagem in enumerate(lote):
+        chave = _chave_de_juncao(mensagem)
+        if chave is not None and i + 1 < len(lote) and _chave_de_juncao(lote[i + 1]) == chave:
+            continue
+        saida.append(mensagem)
+    return saida
+
+
 def _processar(bloquear):
     import heapq
     import time
@@ -255,10 +295,11 @@ def _processar(bloquear):
             if not bloquear:
                 return
             continue
-        if mensagem.get("fim"):
-            raise SystemExit(0)
-        if "cid" in mensagem:
-            _chamar(mensagem["cid"], mensagem.get("dados"))
+        for item in _lote_de_eventos(mensagem):
+            if item.get("fim"):
+                raise SystemExit(0)
+            if "cid" in item:
+                _chamar(item["cid"], item.get("dados"))
 
 
 class Variable:
@@ -1571,7 +1612,14 @@ class Font:
         return Font(font=self)
 
     def measure(self, text, displayof=None):
-        return int(TK.medirTexto(list(self._tupla()), str(text)) or 0)
+        # Perguntar à página custa uma ida e volta (uns 70 ms). A mesma fonte e o mesmo texto dão
+        # sempre a mesma medida, então a resposta fica guardada.
+        chave = (self._tupla(), str(text))
+        if chave not in _MEDIDAS:
+            if len(_MEDIDAS) >= 1000:
+                _MEDIDAS.clear()
+            _MEDIDAS[chave] = int(TK.medirTexto(list(chave[0]), chave[1]) or 0)
+        return _MEDIDAS[chave]
 
     def metrics(self, *opcoes, **kw):
         medidas = TK.metricasFonte(list(self._tupla())) or {}
@@ -1597,6 +1645,7 @@ class Font:
         return f"<tkinter.font.Font object {self.name!r}>"
 
 
+_MEDIDAS = {}
 _PADRAO_FONTE = {"family": "Helvetica", "size": 10, "weight": "normal", "slant": "roman",
                  "underline": 0, "overstrike": 0}
 _OPCOES_FONTE = ("family", "size", "weight", "slant", "underline", "overstrike")
