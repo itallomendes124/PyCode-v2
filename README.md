@@ -1,9 +1,21 @@
 # PyCode v2
 
-Editor de código Python estilo VS Code, feito para tablet e celular Android.
-Roda o Python oficial do Termux e funciona sem internet depois de instalado.
+**Editor de Python que roda nativo no Android.** Escreva, execute e veja as janelas `tkinter` do seu programa direto no tablet ou no celular, sem computador.
 
-> Parte do código foi feita com ajuda de IA (Claude, da Anthropic).
+![PyCode v2 rodando no tablet](docs/tela.png)
+
+[Baixar o APK](https://github.com/itallomendes124/PyCode-v2/releases) · [Como funciona](#como-funciona) · [Segurança](#segurança) · [Testes](#testes)
+
+## Destaques
+
+- **CPython 3.13 nativo no Android** (via [Chaquopy](https://chaquo.com/chaquopy/)), não um interpretador de brinquedo. Confirmado em aparelho real: Samsung Galaxy Tab, Android 16.
+- **`tkinter` próprio, reimplementado do zero.** O Android não tem Tcl/Tk, então as janelas do programa são desenhadas na própria página, com os widgets comuns (`Label`, `Button`, `Entry`, `Text`, `Canvas`, `Listbox`, `Menu`, `Scale`, `ttk.Combobox`, `ttk.Notebook`, `tkinter.font`, `tkinter.filedialog` e outros).
+- **189 testes automatizados**, só com a biblioteca padrão do Python.
+- **Auditoria de segurança** com modelo de ameaças e riscos documentados em [`AUDITORIA.md`](AUDITORIA.md): token por sessão, chave de abertura no app, checagem de `Host` e limites na importação de `.zip`.
+- **APK compilado automaticamente** pelo GitHub Actions a cada mudança no código.
+- Variante **PyCode v2 Bib** com NumPy, Pandas, Matplotlib e Pillow incluídos.
+
+> Parte do código foi feita em par com IA (Claude, da Anthropic).
 
 ## O que tem
 
@@ -132,3 +144,7 @@ Os testes usam só a biblioteca padrão do Python:
     python3 -m unittest discover -s testes -p "test_*.py"
 
 Veja `testes/README.md` para rodar por área.
+
+## Licença
+
+[MIT](LICENSE). Use, altere e distribua à vontade, mantendo o aviso de copyright.
